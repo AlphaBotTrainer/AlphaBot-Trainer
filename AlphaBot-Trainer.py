@@ -4,48 +4,36 @@ import yfinance as yf
 from datetime import datetime, timedelta
 import random
 
-st.set_page_config(page_title="AlphaBot-Trainer", layout="centered", initial_sidebar_state="expanded")
+st.set_page_config(page_title="AlphaBot-Trainer", layout="centered")
 
 st.title("🚀 AlphaBot-Trainer")
 st.caption("Learn the AlphaTrade strategy • Real 5-min charts • Signal explanations")
 
-# Sidebar
-with st.sidebar:
-    st.header("Optional Live Mode")
-    st.caption("Add TradeStation credentials for real data (future feature)")
-    st.info("Currently running in realistic simulated mode")
-
 watchlist = ['NVDA', 'TSLA', 'ARM', 'AVGO', 'HOOD', 'IONQ', 'SMH', 'QQQ', 'SPY', 
              'AAPL', 'META', 'GOOGL', 'AMZN', 'MSFT', 'MU', 'RKLB', 'SOFI']
 
-st.subheader("📊 Live Simulated Market (Realistic Data)")
+st.subheader("📊 Live Simulated Market")
 
 for symbol in watchlist:
     try:
-        # Fetch real 5-min data safely
-        end = datetime.now()
-        start = end - timedelta(days=5)  # More buffer days
-        
+        # Safe data fetch with fallback
         df = yf.download(
             symbol, 
             interval="5m", 
-            start=start, 
-            end=end, 
+            period="5d", 
             progress=False,
-            prepost=True
+            prepost=False
         )
         
         if df.empty or len(df) < 10:
-            st.caption(f"⚠️ No recent data for {symbol}")
-            continue
-            
-        df = df.tail(60)  # Last ~5 hours of 5-min bars
+            raise Exception("No data")
+        
+        df = df.tail(60)  # Last ~5 hours
         
         current_price = round(df['Close'].iloc[-1], 2)
         pm_high = round(df['High'].max(), 2)
         pm_low = round(df['Low'].min(), 2)
         
-        # Calculate indicators
         df['EMA9'] = df['Close'].ewm(span=9).mean()
         typical_price = (df['High'] + df['Low'] + df['Close']) / 3
         df['VWAP'] = (typical_price * df['Volume']).cumsum() / df['Volume'].cumsum()
@@ -56,17 +44,17 @@ for symbol in watchlist:
         # Simple confluence score
         score = 0
         if current_price > pm_high and current_price > ema9 and current_price > vwap:
-            score += 2  # Strong breakout
-        if current_price > df['Close'].iloc[-10]:
+            score += 2
+        if current_price > df['Close'].iloc[-8]:
             score += 1
-        if (df['High'].iloc[-1] - df['Close'].iloc[-1]) < (df['Close'].iloc[-1] - df['Low'].iloc[-1]) * 0.4:
-            score += 1  # Hammer-like
+        if (df['High'].iloc[-1] - df['Close'].iloc[-1]) < (df['Close'].iloc[-1] - df['Low'].iloc[-1]) * 0.35:
+            score += 1
         
         has_buy_signal = score >= 2
         
         # Display
-        expander_title = f"**{symbol}**" if has_buy_signal else symbol
-        with st.expander(expander_title, expanded=False):
+        title = f"**{symbol}**" if has_buy_signal else symbol
+        with st.expander(title, expanded=False):
             col1, col2, col3 = st.columns([2, 2, 1])
             with col1:
                 st.metric("Price", f"${current_price:.2f}")
@@ -79,27 +67,33 @@ for symbol in watchlist:
             
             st.metric("VWAP", f"${vwap:.2f}")
             
-            # 5-minute chart
-            st.line_chart(df['Close'], use_container_width=True)
+            # 5-min chart with fallback
+            try:
+                st.line_chart(df['Close'], use_container_width=True)
+            except:
+                st.caption("Chart temporarily unavailable")
             
             if has_buy_signal:
                 st.success(f"**BUY Signal** — {score} confluence factors")
-                st.caption("Breakout above PMH + above 9EMA & VWAP + momentum")
+                st.caption("Breakout + above 9EMA & VWAP + momentum")
             else:
                 st.info("No strong buy signal right now")
                 
-    except Exception as e:
-        st.caption(f"Could not load {symbol} (data temporarily unavailable)")
+    except:
+        with st.expander(symbol, expanded=False):
+            st.caption("Data temporarily unavailable — showing simulated view")
+            price = round(random.uniform(80, 280), 2)
+            st.metric("Price", f"${price:.2f}")
+            st.info("No strong buy signal right now")
 
 st.divider()
-st.subheader("Strategy Rules – How AlphaBot Decides")
+st.subheader("Strategy Rules")
 st.markdown("""
 **Entry Rules:**
-- SPY daily bias sets call/put direction
+- SPY daily bias sets direction
 - Break or retest of pre-market high/low
-- Price above/below both 9EMA and VWAP
-- Confluence patterns (hammer, doji, flag, etc.)
-- Strong volume
+- Price above/below 9EMA and VWAP
+- Confluence patterns + strong volume
 
 **Exit Rules:**
 - 10% hard stop per trade
