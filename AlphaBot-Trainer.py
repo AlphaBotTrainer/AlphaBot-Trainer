@@ -9,11 +9,11 @@ st.set_page_config(page_title="AlphaBot-Trainer", layout="centered", initial_sid
 st.title("🚀 AlphaBot-Trainer")
 st.caption("Learn the AlphaTrade strategy • Real 5-min charts • Signal explanations")
 
-# Sidebar - Optional API (for future live mode)
+# Sidebar
 with st.sidebar:
     st.header("Optional Live Mode")
     st.caption("Add TradeStation credentials for real data (future feature)")
-    st.info("Currently running in realistic simulated mode using actual market data")
+    st.info("Currently running in realistic simulated mode")
 
 watchlist = ['NVDA', 'TSLA', 'ARM', 'AVGO', 'HOOD', 'IONQ', 'SMH', 'QQQ', 'SPY', 
              'AAPL', 'META', 'GOOGL', 'AMZN', 'MSFT', 'MU', 'RKLB', 'SOFI']
@@ -22,39 +22,49 @@ st.subheader("📊 Live Simulated Market (Realistic Data)")
 
 for symbol in watchlist:
     try:
-        # Fetch real 5-min data for the last trading day
+        # Fetch real 5-min data safely
         end = datetime.now()
-        start = end - timedelta(days=3)
-        df = yf.download(symbol, interval="5m", start=start, end=end, progress=False)
-        if df.empty:
-            continue
-        df = df.tail(50)  # Last ~4 hours of 5-min bars
+        start = end - timedelta(days=5)  # More buffer days
         
-        current_price = df['Close'].iloc[-1]
-        pm_high = df['High'].max() if len(df) > 0 else current_price * 1.02
-        pm_low = df['Low'].min() if len(df) > 0 else current_price * 0.98
+        df = yf.download(
+            symbol, 
+            interval="5m", 
+            start=start, 
+            end=end, 
+            progress=False,
+            prepost=True
+        )
+        
+        if df.empty or len(df) < 10:
+            st.caption(f"⚠️ No recent data for {symbol}")
+            continue
+            
+        df = df.tail(60)  # Last ~5 hours of 5-min bars
+        
+        current_price = round(df['Close'].iloc[-1], 2)
+        pm_high = round(df['High'].max(), 2)
+        pm_low = round(df['Low'].min(), 2)
         
         # Calculate indicators
         df['EMA9'] = df['Close'].ewm(span=9).mean()
-        # Simple VWAP approximation
-        df['VWAP'] = (df['Close'] * df['Volume']).cumsum() / df['Volume'].cumsum()
+        typical_price = (df['High'] + df['Low'] + df['Close']) / 3
+        df['VWAP'] = (typical_price * df['Volume']).cumsum() / df['Volume'].cumsum()
         
-        ema9 = df['EMA9'].iloc[-1]
-        vwap = df['VWAP'].iloc[-1]
+        ema9 = round(df['EMA9'].iloc[-1], 2)
+        vwap = round(df['VWAP'].iloc[-1], 2)
         
-        # Count confluence signals for buy
+        # Simple confluence score
         score = 0
-        if df['Close'].iloc[-1] > pm_high and df['Close'].iloc[-1] > ema9 and df['Close'].iloc[-1] > vwap:
-            score += 1  # PMH breakout
-        if df['Close'].iloc[-1] > df['Close'].iloc[-5]:  # Bullish momentum
+        if current_price > pm_high and current_price > ema9 and current_price > vwap:
+            score += 2  # Strong breakout
+        if current_price > df['Close'].iloc[-10]:
             score += 1
-        # Hammer / Doji simulation (simplified)
-        if (df['High'].iloc[-1] - df['Close'].iloc[-1]) < (df['Close'].iloc[-1] - df['Low'].iloc[-1]) * 0.3:
-            score += 1
+        if (df['High'].iloc[-1] - df['Close'].iloc[-1]) < (df['Close'].iloc[-1] - df['Low'].iloc[-1]) * 0.4:
+            score += 1  # Hammer-like
         
         has_buy_signal = score >= 2
         
-        # Display with green text if buy signal
+        # Display
         expander_title = f"**{symbol}**" if has_buy_signal else symbol
         with st.expander(expander_title, expanded=False):
             col1, col2, col3 = st.columns([2, 2, 1])
@@ -73,13 +83,13 @@ for symbol in watchlist:
             st.line_chart(df['Close'], use_container_width=True)
             
             if has_buy_signal:
-                st.success(f"**BUY Signal Detected** — {score} confluence factors")
-                st.caption("PMH breakout + above 9EMA & VWAP + momentum")
+                st.success(f"**BUY Signal** — {score} confluence factors")
+                st.caption("Breakout above PMH + above 9EMA & VWAP + momentum")
             else:
-                st.info("No strong buy signal at this moment")
+                st.info("No strong buy signal right now")
                 
     except Exception as e:
-        st.caption(f"Could not load {symbol}")
+        st.caption(f"Could not load {symbol} (data temporarily unavailable)")
 
 st.divider()
 st.subheader("Strategy Rules – How AlphaBot Decides")
@@ -99,4 +109,4 @@ st.markdown("""
 - Always close at end of day
 """)
 
-st.caption("AlphaBot-Trainer • Educational tool • Data from last trading day")
+st.caption("AlphaBot-Trainer • Educational tool • Data from last trading session")
