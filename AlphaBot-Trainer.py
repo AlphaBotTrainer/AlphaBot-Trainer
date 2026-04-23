@@ -43,6 +43,29 @@ watchlist = ['NVDA', 'TSLA', 'ARM', 'AVGO', 'HOOD', 'IONQ', 'SMH', 'QQQ', 'SPY',
 
 tab1, tab2, tab3 = st.tabs(["📊 Live Simulated Market", "📝 Today's Trades / Backtest", "📖 Strategy Rules"])
 
+def is_market_closed(date):
+    """Return True if markets are closed (weekend or common US holidays)"""
+    weekday = date.weekday()  # 0=Mon ... 6=Sun
+    if weekday >= 5:  # Saturday or Sunday
+        return True
+    
+    # Common US market holidays (2025-2026)
+    holidays = [
+        (1, 1),   # New Year's Day
+        (1, 19),  # MLK Day (approx)
+        (2, 16),  # Presidents' Day (approx)
+        (4, 3),   # Good Friday 2026 (example)
+        (5, 25),  # Memorial Day
+        (6, 19),  # Juneteenth
+        (7, 4),   # Independence Day
+        (9, 7),   # Labor Day
+        (11, 27), # Thanksgiving
+        (12, 25), # Christmas
+    ]
+    if (date.month, date.day) in holidays:
+        return True
+    return False
+
 @st.cache_data(ttl=1800)
 def get_real_data(symbol, date):
     if not YFINANCE_AVAILABLE:
@@ -60,67 +83,78 @@ def get_real_data(symbol, date):
 with tab1:
     st.subheader(f"Market on {selected_date.strftime('%B %d, %Y')}")
     
-    for symbol in watchlist:
-        real_df = get_real_data(symbol, selected_date)
+    if is_market_closed(selected_date):
+        st.error("🛑 **Markets were closed on this day** (Weekend or US Market Holiday)")
+        st.info("No trading occurred. Please select a weekday that is not a holiday.")
         
-        if real_df is not None and len(real_df) > 10:
-            df = real_df.copy()
-            data_source = "📊 **REAL** 5-min data from Yahoo Finance"
-        else:
-            # Safe fallback
-            base_price = random.uniform(80, 280)
-            prices = []
-            current = base_price
-            for _ in range(72):
-                change = random.gauss(0, 0.8)
-                current += change
-                prices.append(max(current, 5.0))
-            df = pd.DataFrame({'Price': prices})
-            data_source = "⚠️ Simulated data (real 5-min only available for ~last 60 days)"
-        
-        df['EMA9'] = df['Price'].ewm(span=9).mean()
-        
-        # Ultra-safe price extraction
-        try:
-            current_price = round(float(df['Price'].iloc[-1]), 2)
-            ema9 = round(float(df['EMA9'].iloc[-1]), 2)
-        except (IndexError, ValueError, TypeError):
-            current_price = 150.0
-            ema9 = 150.0
-        
-        score = random.randint(0, 4)
-        has_buy_signal = score >= 2
-        
-        if has_buy_signal:
-            expander_title = f":green[**{symbol}**]"
-        else:
-            expander_title = f"**{symbol}**"
-        
-        with st.expander(expander_title, expanded=False):
-            st.caption(data_source)
-            col1, col2, col3 = st.columns([2, 2, 1])
-            with col1:
-                st.metric("Current Price", f"${current_price:.2f}")
-            with col2:
-                st.metric("9EMA", f"${ema9:.2f}")
-            with col3:
-                st.metric("Signals", f"{score}/4", delta="BUY" if has_buy_signal else None)
+        # Show a simple message for all stocks
+        for symbol in watchlist:
+            with st.expander(f"**{symbol}**", expanded=False):
+                st.caption("No data — Markets closed")
+                st.write("No price movement or trading activity on this date.")
+    else:
+        for symbol in watchlist:
+            real_df = get_real_data(symbol, selected_date)
             
-            st.line_chart(df['Price'], use_container_width=True, height=340)
+            if real_df is not None and len(real_df) > 10:
+                df = real_df.copy()
+                data_source = "📊 **REAL** 5-min data from Yahoo Finance"
+            else:
+                base_price = random.uniform(80, 280)
+                prices = []
+                current = base_price
+                for _ in range(72):
+                    change = random.gauss(0, 0.8)
+                    current += change
+                    prices.append(max(current, 5.0))
+                df = pd.DataFrame({'Price': prices})
+                data_source = "⚠️ Simulated data (real 5-min only available for ~last 60 days)"
+            
+            df['EMA9'] = df['Price'].ewm(span=9).mean()
+            
+            try:
+                current_price = round(float(df['Price'].iloc[-1]), 2)
+                ema9 = round(float(df['EMA9'].iloc[-1]), 2)
+            except:
+                current_price = 150.0
+                ema9 = 150.0
+            
+            score = random.randint(0, 4)
+            has_buy_signal = score >= 2
             
             if has_buy_signal:
-                st.success(f"**BUY Signal Detected** — {score} confluence factors")
-                st.caption("Breakout above PMH + above 9EMA & VWAP + momentum")
+                expander_title = f":green[**{symbol}**]"
             else:
-                st.info("No strong buy signal right now")
+                expander_title = f"**{symbol}**"
+            
+            with st.expander(expander_title, expanded=False):
+                st.caption(data_source)
+                col1, col2, col3 = st.columns([2, 2, 1])
+                with col1:
+                    st.metric("Current Price", f"${current_price:.2f}")
+                with col2:
+                    st.metric("9EMA", f"${ema9:.2f}")
+                with col3:
+                    st.metric("Signals", f"{score}/4", delta="BUY" if has_buy_signal else None)
+                
+                st.line_chart(df['Price'], use_container_width=True, height=340)
+                
+                if has_buy_signal:
+                    st.success(f"**BUY Signal Detected** — {score} confluence factors")
+                    st.caption("Breakout above PMH + above 9EMA & VWAP + momentum")
+                else:
+                    st.info("No strong buy signal right now")
 
 with tab2:
     st.subheader(f"Trades / Backtest on {selected_date.strftime('%B %d, %Y')}")
     
-    if enable_backtest:
+    if is_market_closed(selected_date):
+        st.error("🛑 Markets were closed — No trades occurred")
+        st.info("Please select a trading day to see simulated or backtested trades.")
+    elif enable_backtest:
         st.info("🔬 Simple Backtest Mode (educational)")
         st.metric("**Simulated Daily P&L**", "$1,850", delta="Positive")
-        st.caption("Full rule-based backtesting would require running your exact AlphaTrade logic on every bar.")
+        st.caption("Full rule-based backtesting would apply your exact AlphaTrade rules bar-by-bar.")
     else:
         random.seed(selected_date.toordinal())
         daily_pnl = round(random.uniform(600, 4200), 2)
