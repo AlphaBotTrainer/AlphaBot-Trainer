@@ -34,35 +34,30 @@ with tab1:
     st.subheader("Live Simulated Market - Full Day 5-min Charts")
     
     for symbol in watchlist:
-        with st.expander(f"**{symbol}**", expanded=False):
-            # Generate realistic full-day 5-min data
-            base_price = random.uniform(80, 280)
-            prices = []
-            current = base_price
-            
-            for i in range(72):  # ~6 hours of 5-min bars
-                change = random.gauss(0, 0.8)
-                current += change
-                prices.append(max(current, 5.0))
-            
-            df = pd.DataFrame({'Price': prices})
-            
-            # Calculate indicators safely
-            df['EMA9'] = df['Price'].ewm(span=9).mean()
-            
-            # Simple cumulative VWAP approximation
-            volume = [random.randint(800000, 3000000) for _ in range(len(df))]
-            typical_price = df['Price']
-            df['VWAP'] = (typical_price * volume).cumsum() / pd.Series(volume).cumsum()
-            
-            current_price = round(df['Price'].iloc[-1], 2)
-            ema9 = round(df['EMA9'].iloc[-1], 2)
-            vwap = round(df['VWAP'].iloc[-1], 2)
-            
-            # Confluence score
-            score = random.randint(0, 4)
-            has_buy_signal = score >= 2
-            
+        # Generate realistic full-day 5-min data
+        base_price = random.uniform(80, 280)
+        prices = []
+        current = base_price
+        
+        for i in range(72):  # ~6 hours of 5-min bars
+            change = random.gauss(0, 0.8)
+            current += change
+            prices.append(max(current, 5.0))
+        
+        df = pd.DataFrame({'Price': prices})
+        df['EMA9'] = df['Price'].ewm(span=9).mean()
+        
+        current_price = round(df['Price'].iloc[-1], 2)
+        ema9 = round(df['EMA9'].iloc[-1], 2)
+        
+        # Confluence score
+        score = random.randint(0, 4)
+        has_buy_signal = score >= 2
+        
+        # Green title for buy signals
+        title = f":green[**{symbol}**]" if has_buy_signal else f"**{symbol}**"
+        
+        with st.expander(title, expanded=False):
             col1, col2, col3 = st.columns([2, 2, 1])
             with col1:
                 st.metric("Current Price", f"${current_price:.2f}")
@@ -70,8 +65,6 @@ with tab1:
                 st.metric("9EMA", f"${ema9:.2f}")
             with col3:
                 st.metric("Signals", f"{score}/4", delta="BUY" if has_buy_signal else None)
-            
-            st.metric("VWAP", f"${vwap:.2f}")
             
             # Full-day 5-minute chart
             st.line_chart(df['Price'], use_container_width=True, height=320)
