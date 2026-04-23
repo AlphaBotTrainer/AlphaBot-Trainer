@@ -37,16 +37,19 @@ with tab1:
     st.subheader("Live Simulated Market")
     
     for symbol in watchlist:
-        with st.expander(f"**{symbol}**", expanded=False):
-            price = round(random.uniform(80, 280), 2)
-            pm_high = round(price * 1.018, 2)
-            pm_low = round(price * 0.982, 2)
-            ema9 = round(price * 1.005, 2)
-            vwap = round(price * 1.002, 2)
-            
-            score = random.randint(0, 4)
-            has_buy_signal = score >= 2
-            
+        price = round(random.uniform(80, 280), 2)
+        pm_high = round(price * 1.018, 2)
+        pm_low = round(price * 0.982, 2)
+        ema9 = round(price * 1.005, 2)
+        vwap = round(price * 1.002, 2)
+        
+        score = random.randint(0, 4)
+        has_buy_signal = score >= 2
+        
+        # Green title if buy signal
+        title = f":green[**{symbol}**]" if has_buy_signal else f"**{symbol}**"
+        
+        with st.expander(title, expanded=False):
             col1, col2, col3 = st.columns([2, 2, 1])
             with col1:
                 st.metric("Price", f"${price:.2f}")
@@ -107,7 +110,6 @@ with tab2:
     ]
     
     for trade in todays_trades:
-        # Color the title based on P&L
         color = "green" if trade['pnl'] > 0 else "red"
         title = f":{color}[**{trade['symbol']} {trade['action']}**]"
         
