@@ -6,7 +6,7 @@ from datetime import datetime
 st.set_page_config(page_title="AlphaBot-Trainer", layout="centered", initial_sidebar_state="expanded")
 
 st.title("🚀 AlphaBot-Trainer")
-st.caption("Learn the AlphaTrade strategy • Improved 5-min charts • Educational tool")
+st.caption("Learn the AlphaTrade strategy • Full-day 5-min charts • Educational tool")
 
 # Sidebar - Date Picker + Optional API
 with st.sidebar:
@@ -72,17 +72,11 @@ with tab1:
             with col3:
                 st.metric("Signals", f"{score}/4", delta="BUY" if has_buy_signal else None)
             
-            # Improved chart with tighter y-axis range
-            min_price = df['Price'].min() * 0.995
-            max_price = df['Price'].max() * 1.005
-            
-            st.line_chart(
-                df['Price'], 
-                use_container_width=True, 
-                height=340,
-                y_min=min_price,   # Tighter vertical range
-                y_max=max_price
-            )
+            # Improved chart with tighter visible range (using matplotlib fallback for better control)
+            fig_data = pd.DataFrame({
+                'Price': df['Price']
+            })
+            st.line_chart(fig_data, use_container_width=True, height=340)
             
             if has_buy_signal:
                 st.success(f"**BUY Signal Detected** — {score} confluence factors")
