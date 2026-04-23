@@ -6,9 +6,9 @@ from datetime import datetime
 st.set_page_config(page_title="AlphaBot-Trainer", layout="centered", initial_sidebar_state="expanded")
 
 st.title("🚀 AlphaBot-Trainer")
-st.caption("Learn the AlphaTrade strategy • Date-sensitive trades • Educational tool")
+st.caption("Learn the AlphaTrade strategy • Detailed trades with notes • Educational tool")
 
-# Sidebar - Date Picker + Optional API
+# Sidebar
 with st.sidebar:
     st.header("Simulation Date")
     selected_date = st.date_input(
@@ -83,37 +83,70 @@ with tab1:
 with tab2:
     st.subheader(f"📝 Trades on {selected_date.strftime('%B %d, %Y')}")
     
-    # Make daily P&L and trades vary based on selected date (seed with date)
-    random.seed(selected_date.toordinal())  # This makes data consistent for the same date
-    daily_pnl = round(random.uniform(600, 3800), 2)
+    # Make data consistent for the same date but different across dates
+    random.seed(selected_date.toordinal())
+    
+    daily_pnl = round(random.uniform(600, 4200), 2)
     st.metric("**Daily Profit & Loss**", f"${daily_pnl:,.2f}", delta="Positive" if daily_pnl > 0 else "Negative")
     
-    st.write("**Grouped Trades (Buy + Exit with P&L)**")
+    st.write("**Grouped Trades (Buy + Exit with full details & notes)**")
     
-    # Generate different trades based on the selected date
+    # Generate varied trades for the selected date
     num_trades = random.randint(2, 5)
     todays_trades = []
     for i in range(num_trades):
         symbol = random.choice(watchlist)
-        pnl = round(random.uniform(-600, 1800), 0)
+        pnl = round(random.uniform(-850, 2450), 0)
+        buy_price = round(random.uniform(2.8, 8.5), 2)
+        delta = round(random.uniform(0.15, 0.28), 2)
+        strike = round(random.uniform(120, 320), 1)
+        
         todays_trades.append({
             "symbol": symbol,
             "buy_time": f"0{random.randint(9,11)}:{random.randint(10,59)}",
             "exit_time": f"{random.randint(12,15)}:{random.randint(10,59)}",
             "action": "Call",
-            "buy_reason": random.choice(["PMH breakout + hammer", "PMH retest + dragonfly doji", "Strong bull flag + breakout", "Volume spike + confluence"]),
-            "exit_reason": random.choice(["60% profit trail", "4-wick exhaustion rule", "VWAP cross", "10% stop hit"]),
-            "pnl": pnl
+            "buy_reason": random.choice(["PMH breakout + hammer", "PMH retest + dragonfly doji", "Strong bull flag + breakout", "Volume spike + inverted hammer"]),
+            "exit_reason": random.choice(["60% profit trail", "4-wick exhaustion rule", "VWAP cross", "Reached 10% stop"]),
+            "buy_price": buy_price,
+            "delta": delta,
+            "strike": strike,
+            "expiration": "Weekly",
+            "contracts": random.randint(2, 6),
+            "pnl": pnl,
+            "good_notes": random.choice([
+                "Excellent entry timing with strong confluence and volume confirmation.",
+                "Good retest of PMH with clear candlestick pattern.",
+                "Strong momentum and volume spike supported the breakout."
+            ]),
+            "lost_potential": random.choice([
+                "Left additional profit on the table by trailing too tightly.",
+                "Exited early on minor wick exhaustion — stock reversed strongly afterward.",
+                "Missed runner extension due to conservative VWAP exit."
+            ])
         })
     
     for trade in todays_trades:
         color = "green" if trade['pnl'] > 0 else "red"
         title = f":{color}[**{trade['symbol']} {trade['action']}**]"
+        
         with st.expander(title, expanded=False):
             st.write(f"**Buy:** {trade['buy_time']} — {trade['buy_reason']}")
             st.write(f"**Exit:** {trade['exit_time']} — {trade['exit_reason']}")
+            
+            st.write("**Option Details:**")
+            st.write(f"- **Buy Premium:** ${trade['buy_price']:.2f} per share (${trade['buy_price'] * 100 * trade['contracts']:.0f} total)")
+            st.write(f"- **Delta at entry:** {trade['delta']}")
+            st.write(f"- **Strike:** ${trade['strike']}")
+            st.write(f"- **Expiration:** {trade['expiration']}")
+            st.write(f"- **Contracts:** {trade['contracts']}")
+            
             pnl_color = "green" if trade['pnl'] > 0 else "red"
-            st.markdown(f"**P&L:** :{pnl_color}[${trade['pnl']:,}]")
+            st.markdown(f"**P&L for this trade:** :{pnl_color}[${trade['pnl']:,}]")
+            
+            st.write("**Trade Notes:**")
+            st.write(f"- **What went well:** {trade['good_notes']}")
+            st.write(f"- **Lost potential profit:** {trade['lost_potential']}")
 
 with tab3:
     st.subheader("Strategy Rules – How AlphaBot Decides")
