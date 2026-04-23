@@ -58,9 +58,9 @@ with tab1:
         score = random.randint(0, 4)
         has_buy_signal = score >= 2
         
-        # Clean green title without nesting
+        # Clean green title
         if has_buy_signal:
-            expander_title = f"🟢 **{symbol}**"
+            expander_title = f":green[**{symbol}**]"
         else:
             expander_title = f"**{symbol}**"
         
@@ -89,4 +89,37 @@ with tab2:
     st.write("**Grouped Trades (Buy + Exit with P&L)**")
     
     todays_trades = [
-        {"symbol": "NVDA", "buy_time": "
+        {"symbol": "NVDA", "buy_time": "09:47", "exit_time": "11:25", "action": "Call", "buy_reason": "PMH breakout + hammer", "exit_reason": "60% profit trail", "pnl": 1240},
+        {"symbol": "TSLA", "buy_time": "10:12", "exit_time": "13:40", "action": "Call", "buy_reason": "PMH retest + dragonfly doji", "exit_reason": "4-wick exhaustion", "pnl": -380},
+        {"symbol": "ARM", "buy_time": "10:55", "exit_time": "14:15", "action": "Call", "buy_reason": "Strong bull flag", "exit_reason": "VWAP cross", "pnl": 920}
+    ]
+    
+    for trade in todays_trades:
+        color = "green" if trade['pnl'] > 0 else "red"
+        title = f":{color}[**{trade['symbol']} {trade['action']}**]"
+        with st.expander(title, expanded=False):
+            st.write(f"**Buy:** {trade['buy_time']} — {trade['buy_reason']}")
+            st.write(f"**Exit:** {trade['exit_time']} — {trade['exit_reason']}")
+            pnl_color = "green" if trade['pnl'] > 0 else "red"
+            st.markdown(f"**P&L:** :{pnl_color}[${trade['pnl']:,}]")
+
+with tab3:
+    st.subheader("Strategy Rules – How AlphaBot Decides")
+    st.markdown("""
+    **Entry Rules:**
+    - SPY daily bias sets call/put direction
+    - Break or retest of pre-market high/low
+    - Price above/below both 9EMA and VWAP
+    - Confluence patterns (hammer, doji, flag, etc.)
+    - Strong volume
+
+    **Exit Rules:**
+    - 10% hard stop per trade
+    - 4.5% daily loss cap
+    - 60% profit trail after new high/low
+    - 4-wick exhaustion rule
+    - Always close at end of day
+    """)
+
+st.divider()
+st.caption(f"AlphaBot-Trainer • Showing simulated data for {selected_date.strftime('%B %d, %Y')}")
