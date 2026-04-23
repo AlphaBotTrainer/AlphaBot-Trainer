@@ -3,18 +3,18 @@ import pandas as pd
 import random
 from datetime import datetime, timedelta
 
-# Safe import for yfinance
+# Safe yfinance import
 try:
     import yfinance as yf
     YFINANCE_AVAILABLE = True
 except ImportError:
     YFINANCE_AVAILABLE = False
-    st.warning("⚠️ yfinance not installed yet. Add 'yfinance' to your requirements.txt file.")
+    st.warning("⚠️ yfinance not installed. Add 'yfinance' to requirements.txt")
 
 st.set_page_config(page_title="AlphaBot-Trainer", layout="centered", initial_sidebar_state="expanded")
 
 st.title("🚀 AlphaBot-Trainer")
-st.caption("Learn the AlphaTrade strategy • Real 5-min data (last ~60 days) • Educational tool")
+st.caption("Learn the AlphaTrade strategy • Real 5-min data when available • Educational tool")
 
 # Sidebar
 with st.sidebar:
@@ -25,8 +25,7 @@ with st.sidebar:
         max_value=datetime.now().date()
     )
     
-    enable_backtest = st.checkbox("Enable Simple Backtest Mode", value=False,
-                                  help="Uses real historical bars where available")
+    enable_backtest = st.checkbox("Enable Simple Backtest Mode", value=False)
     
     st.header("TradeStation API (Optional)")
     client_id = st.text_input("Client ID", value="", type="password")
@@ -35,16 +34,16 @@ with st.sidebar:
     
     if st.button("Connect"):
         if client_id and client_secret and account_id:
-            st.success("✅ Credentials saved for this session")
+            st.success("✅ Credentials saved")
         else:
-            st.warning("Please fill all fields")
+            st.warning("Fill all fields")
 
 watchlist = ['NVDA', 'TSLA', 'ARM', 'AVGO', 'HOOD', 'IONQ', 'SMH', 'QQQ', 'SPY', 
              'AAPL', 'META', 'GOOGL', 'AMZN', 'MSFT', 'MU', 'RKLB', 'SOFI']
 
 tab1, tab2, tab3 = st.tabs(["📊 Live Simulated Market", "📝 Today's Trades / Backtest", "📖 Strategy Rules"])
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=1800)
 def get_real_data(symbol, date):
     if not YFINANCE_AVAILABLE:
         return None
@@ -52,10 +51,10 @@ def get_real_data(symbol, date):
         start = date
         end = date + timedelta(days=1)
         df = yf.download(symbol, start=start, end=end, interval='5m', progress=False, prepost=False)
-        if df is not None and not df.empty and len(df) > 5:
+        if df is not None and not df.empty and len(df) > 10:
             return df[['Close']].rename(columns={'Close': 'Price'})
         return None
-    except Exception:
+    except:
         return None
 
 with tab1:
@@ -64,11 +63,11 @@ with tab1:
     for symbol in watchlist:
         real_df = get_real_data(symbol, selected_date)
         
-        if real_df is not None and len(real_df) > 5:
+        if real_df is not None and len(real_df) > 10:
             df = real_df.copy()
-            data_source = "📊 **REAL** 5-min historical data (Yahoo Finance)"
+            data_source = "📊 **REAL** 5-min data from Yahoo Finance"
         else:
-            # Fallback simulation
+            # Safe fallback simulation
             base_price = random.uniform(80, 280)
             prices = []
             current = base_price
@@ -77,13 +76,13 @@ with tab1:
                 current += change
                 prices.append(max(current, 5.0))
             df = pd.DataFrame({'Price': prices})
-            data_source = "⚠️ Simulated data (real 5-min data only available for ~last 60 days)"
+            data_source = "⚠️ Simulated data (real 5-min only available ~last 60 days)"
         
         df['EMA9'] = df['Price'].ewm(span=9).mean()
         
-        # Safe price extraction
-        current_price = round(df['Price'].iloc[-1], 2) if not df.empty else 0.0
-        ema9 = round(df['EMA9'].iloc[-1], 2) if not df.empty else 0.0
+        # Extra safe price extraction
+        current_price = round(float(df['Price'].iloc[-1]), 2) if not df.empty else 150.0
+        ema9 = round(float(df['EMA9'].iloc[-1]), 2) if not df.empty else 150.0
         
         score = random.randint(0, 4)
         has_buy_signal = score >= 2
@@ -115,15 +114,15 @@ with tab2:
     st.subheader(f"Trades / Backtest on {selected_date.strftime('%B %d, %Y')}")
     
     if enable_backtest:
-        st.info("🔬 Simple Backtest Mode — Real price data used where available")
-        st.metric("**Simulated Daily P&L (Educational)**", "$1,850", delta="Positive")
-        st.caption("In a full backtester we would apply your exact AlphaTrade rules bar-by-bar.")
+        st.info("🔬 Simple Backtest Mode (educational)")
+        st.metric("**Simulated Daily P&L**", "$1,850", delta="Positive")
+        st.caption("Full rule-based backtesting would run your exact AlphaTrade logic on every bar.")
     else:
         random.seed(selected_date.toordinal())
         daily_pnl = round(random.uniform(600, 4200), 2)
         st.metric("**Daily Profit & Loss**", f"${daily_pnl:,.2f}", delta="Positive" if daily_pnl > 0 else "Negative")
         
-        st.write("**Grouped Trades (with details & notes)**")
+        st.write("**Grouped Trades (with full details & notes)**")
         
         num_trades = random.randint(2, 5)
         todays_trades = []
@@ -139,8 +138,8 @@ with tab2:
                 "buy_time": f"0{random.randint(9,11)}:{random.randint(10,59)}",
                 "exit_time": f"{random.randint(12,15)}:{random.randint(10,59)}",
                 "action": "Call",
-                "buy_reason": random.choice(["PMH breakout + hammer", "PMH retest + dragonfly doji", "Strong bull flag"]),
-                "exit_reason": random.choice(["60% profit trail", "4-wick exhaustion", "VWAP cross"]),
+                "buy_reason": random.choice(["PMH breakout + hammer", "PMH retest + dragonfly doji", "Strong bull flag + breakout"]),
+                "exit_reason": random.choice(["60% profit trail", "4-wick exhaustion rule", "VWAP cross"]),
                 "buy_price": buy_price,
                 "delta": delta_val,
                 "strike": strike,
@@ -172,8 +171,8 @@ with tab2:
 with tab3:
     st.subheader("Strategy Rules")
     st.markdown("""
-    **Entry:** SPY bias + PMH/breakout + 9EMA/VWAP + confluence  
-    **Exit:** 10% stop, 4.5% daily cap, 60% trail, 4-wick rule, EOD close
+    **Entry:** SPY bias + PMH breakout/retest + 9EMA/VWAP + candlestick confluence  
+    **Exit:** 10% stop • 4.5% daily cap • 60% trail • 4-wick rule • EOD close
     """)
 
 st.divider()
