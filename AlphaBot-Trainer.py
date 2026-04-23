@@ -6,7 +6,7 @@ from datetime import datetime
 st.set_page_config(page_title="AlphaBot-Trainer", layout="centered", initial_sidebar_state="expanded")
 
 st.title("🚀 AlphaBot-Trainer")
-st.caption("Learn the AlphaTrade strategy • Today's signals • Educational tool")
+st.caption("Learn the AlphaTrade strategy • Grouped trades with P&L • Educational tool")
 
 # Sidebar - Optional API
 with st.sidebar:
@@ -28,10 +28,10 @@ with st.sidebar:
 watchlist = ['NVDA', 'TSLA', 'ARM', 'AVGO', 'HOOD', 'IONQ', 'SMH', 'QQQ', 'SPY', 
              'AAPL', 'META', 'GOOGL', 'AMZN', 'MSFT', 'MU', 'RKLB', 'SOFI']
 
-tab1, tab2, tab3 = st.tabs(["📊 Live Simulated Market", "📝 Today's Signals", "📖 Strategy Rules"])
+tab1, tab2, tab3 = st.tabs(["📊 Live Simulated Market", "📝 Today's Trades", "📖 Strategy Rules"])
 
-# Simulated daily P&L (for demo)
-daily_pnl = round(random.uniform(800, 2800), 2)
+# Simulated daily P&L
+daily_pnl = round(random.uniform(800, 3200), 2)
 
 with tab1:
     st.subheader("Live Simulated Market")
@@ -71,25 +71,48 @@ with tab1:
                 st.info("No strong buy signal right now")
 
 with tab2:
-    st.subheader(f"📝 Today's Signals & P&L")
+    st.subheader(f"📝 Today's Trades & P&L")
     st.metric("**Daily Profit & Loss**", f"${daily_pnl:,.2f}", delta="Positive" if daily_pnl > 0 else "Negative")
     
-    st.write("**All signals generated today:**")
+    st.write("**Grouped Trades (Buy + Exit)**")
     
-    # Simulated today's signals
-    todays_signals = [
-        {"time": "09:47", "symbol": "NVDA", "action": "BUY Call", "reason": "First candle closed above PMH + above 9EMA & VWAP + hammer + strong volume"},
-        {"time": "10:12", "symbol": "TSLA", "action": "BUY Call", "reason": "PMH retest + dragonfly doji + volume spike"},
-        {"time": "10:55", "symbol": "ARM", "action": "BUY Call", "reason": "Strong bull flag + breakout above PMH"},
-        {"time": "11:40", "symbol": "NVDA", "action": "EXIT Call", "reason": "Hit 60% profit trail after new HOD"},
-        {"time": "13:25", "symbol": "TSLA", "action": "EXIT Call", "reason": "4-wick exhaustion rule triggered"},
+    # Simulated grouped trades with P&L
+    todays_trades = [
+        {
+            "symbol": "NVDA",
+            "buy_time": "09:47",
+            "exit_time": "11:25",
+            "action": "Call",
+            "buy_reason": "PMH breakout + hammer + strong volume",
+            "exit_reason": "Hit 60% profit trail",
+            "pnl": 1240
+        },
+        {
+            "symbol": "TSLA",
+            "buy_time": "10:12",
+            "exit_time": "13:40",
+            "action": "Call",
+            "buy_reason": "PMH retest + dragonfly doji",
+            "exit_reason": "4-wick exhaustion rule",
+            "pnl": -380
+        },
+        {
+            "symbol": "ARM",
+            "buy_time": "10:55",
+            "exit_time": "14:15",
+            "action": "Call",
+            "buy_reason": "Strong bull flag + breakout",
+            "exit_reason": "Core exit on VWAP cross",
+            "pnl": 920
+        }
     ]
     
-    for sig in todays_signals:
-        if "BUY" in sig["action"]:
-            st.success(f"**{sig['time']} — {sig['action']} {sig['symbol']}**  \n{sig['reason']}")
-        else:
-            st.warning(f"**{sig['time']} — {sig['action']} {sig['symbol']}**  \n{sig['reason']}")
+    for trade in todays_trades:
+        with st.expander(f"{trade['symbol']} {trade['action']}"):
+            st.write(f"**Buy:** {trade['buy_time']} — {trade['buy_reason']}")
+            st.write(f"**Exit:** {trade['exit_time']} — {trade['exit_reason']}")
+            pnl_color = "green" if trade['pnl'] > 0 else "red"
+            st.markdown(f"**P&L:** <span style='color:{pnl_color}'>${trade['pnl']:,}</span>", unsafe_allow_html=True)
 
 with tab3:
     st.subheader("Strategy Rules – How AlphaBot Decides")
