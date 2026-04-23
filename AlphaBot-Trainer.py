@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import random
-from datetime import datetime, time
+from datetime import datetime
 
 st.set_page_config(page_title="AlphaBot-Trainer", layout="centered", initial_sidebar_state="expanded")
 
@@ -35,23 +35,25 @@ with tab1:
     
     for symbol in watchlist:
         with st.expander(f"**{symbol}**", expanded=False):
-            # Generate realistic full-day 5-min data (72 bars = 6 hours)
+            # Generate realistic full-day 5-min data
             base_price = random.uniform(80, 280)
             prices = []
             current = base_price
-            pm_high = base_price * 1.02
-            pm_low = base_price * 0.98
             
-            for i in range(72):  # Simulate 6 hours of 5-min bars
-                change = random.gauss(0, 0.8)  # realistic volatility
+            for i in range(72):  # ~6 hours of 5-min bars
+                change = random.gauss(0, 0.8)
                 current += change
-                prices.append(max(current, 5))  # prevent negative prices
+                prices.append(max(current, 5.0))
             
             df = pd.DataFrame({'Price': prices})
             
-            # Calculate indicators on simulated data
+            # Calculate indicators safely
             df['EMA9'] = df['Price'].ewm(span=9).mean()
-            df['VWAP'] = (df['Price'] * (random.uniform(800000, 2000000) for _ in range(len(df)))).cumsum() / pd.Series(range(1, len(df)+1)).cumsum()
+            
+            # Simple cumulative VWAP approximation
+            volume = [random.randint(800000, 3000000) for _ in range(len(df))]
+            typical_price = df['Price']
+            df['VWAP'] = (typical_price * volume).cumsum() / pd.Series(volume).cumsum()
             
             current_price = round(df['Price'].iloc[-1], 2)
             ema9 = round(df['EMA9'].iloc[-1], 2)
@@ -64,9 +66,7 @@ with tab1:
             col1, col2, col3 = st.columns([2, 2, 1])
             with col1:
                 st.metric("Current Price", f"${current_price:.2f}")
-                st.metric("PM High", f"${round(pm_high, 2):.2f}")
             with col2:
-                st.metric("PM Low", f"${round(pm_low, 2):.2f}")
                 st.metric("9EMA", f"${ema9:.2f}")
             with col3:
                 st.metric("Signals", f"{score}/4", delta="BUY" if has_buy_signal else None)
@@ -74,7 +74,7 @@ with tab1:
             st.metric("VWAP", f"${vwap:.2f}")
             
             # Full-day 5-minute chart
-            st.line_chart(df['Price'], use_container_width=True, height=300)
+            st.line_chart(df['Price'], use_container_width=True, height=320)
             
             if has_buy_signal:
                 st.success(f"**BUY Signal Detected** — {score} confluence factors")
