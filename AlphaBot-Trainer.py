@@ -9,7 +9,7 @@ try:
     YFINANCE_AVAILABLE = True
 except ImportError:
     YFINANCE_AVAILABLE = False
-    st.warning("⚠️ yfinance not installed. Add 'yfinance' to requirements.txt")
+    st.warning("⚠️ yfinance not installed. Add 'yfinance' to your requirements.txt file.")
 
 st.set_page_config(page_title="AlphaBot-Trainer", layout="centered", initial_sidebar_state="expanded")
 
@@ -67,7 +67,7 @@ with tab1:
             df = real_df.copy()
             data_source = "📊 **REAL** 5-min data from Yahoo Finance"
         else:
-            # Safe fallback simulation
+            # Safe fallback
             base_price = random.uniform(80, 280)
             prices = []
             current = base_price
@@ -76,13 +76,17 @@ with tab1:
                 current += change
                 prices.append(max(current, 5.0))
             df = pd.DataFrame({'Price': prices})
-            data_source = "⚠️ Simulated data (real 5-min only available ~last 60 days)"
+            data_source = "⚠️ Simulated data (real 5-min only available for ~last 60 days)"
         
         df['EMA9'] = df['Price'].ewm(span=9).mean()
         
-        # Extra safe price extraction
-        current_price = round(float(df['Price'].iloc[-1]), 2) if not df.empty else 150.0
-        ema9 = round(float(df['EMA9'].iloc[-1]), 2) if not df.empty else 150.0
+        # Ultra-safe price extraction
+        try:
+            current_price = round(float(df['Price'].iloc[-1]), 2)
+            ema9 = round(float(df['EMA9'].iloc[-1]), 2)
+        except (IndexError, ValueError, TypeError):
+            current_price = 150.0
+            ema9 = 150.0
         
         score = random.randint(0, 4)
         has_buy_signal = score >= 2
@@ -116,7 +120,7 @@ with tab2:
     if enable_backtest:
         st.info("🔬 Simple Backtest Mode (educational)")
         st.metric("**Simulated Daily P&L**", "$1,850", delta="Positive")
-        st.caption("Full rule-based backtesting would run your exact AlphaTrade logic on every bar.")
+        st.caption("Full rule-based backtesting would require running your exact AlphaTrade logic on every bar.")
     else:
         random.seed(selected_date.toordinal())
         daily_pnl = round(random.uniform(600, 4200), 2)
