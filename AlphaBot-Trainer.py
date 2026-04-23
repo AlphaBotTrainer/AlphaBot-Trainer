@@ -6,7 +6,7 @@ from datetime import datetime
 st.set_page_config(page_title="AlphaBot-Trainer", layout="centered", initial_sidebar_state="expanded")
 
 st.title("🚀 AlphaBot-Trainer")
-st.caption("Learn the AlphaTrade strategy • Tight 5-min charts • Educational tool")
+st.caption("Learn the AlphaTrade strategy • Date-sensitive trades • Educational tool")
 
 # Sidebar - Date Picker + Optional API
 with st.sidebar:
@@ -72,20 +72,7 @@ with tab1:
             with col3:
                 st.metric("Signals", f"{score}/4", delta="BUY" if has_buy_signal else None)
             
-            # Tightest possible range - no extra empty space
-            min_price = df['Price'].min()
-            max_price = df['Price'].max()
-            
-            # Add tiny buffer only if needed to prevent flat line issues
-            if max_price - min_price < 0.5:
-                min_price -= 0.1
-                max_price += 0.1
-            
-            st.line_chart(
-                df['Price'], 
-                use_container_width=True, 
-                height=380
-            )
+            st.line_chart(df['Price'], use_container_width=True, height=340)
             
             if has_buy_signal:
                 st.success(f"**BUY Signal Detected** — {score} confluence factors")
@@ -95,16 +82,29 @@ with tab1:
 
 with tab2:
     st.subheader(f"📝 Trades on {selected_date.strftime('%B %d, %Y')}")
-    daily_pnl = round(random.uniform(800, 3200), 2)
+    
+    # Make daily P&L and trades vary based on selected date (seed with date)
+    random.seed(selected_date.toordinal())  # This makes data consistent for the same date
+    daily_pnl = round(random.uniform(600, 3800), 2)
     st.metric("**Daily Profit & Loss**", f"${daily_pnl:,.2f}", delta="Positive" if daily_pnl > 0 else "Negative")
     
     st.write("**Grouped Trades (Buy + Exit with P&L)**")
     
-    todays_trades = [
-        {"symbol": "NVDA", "buy_time": "09:47", "exit_time": "11:25", "action": "Call", "buy_reason": "PMH breakout + hammer", "exit_reason": "60% profit trail", "pnl": 1240},
-        {"symbol": "TSLA", "buy_time": "10:12", "exit_time": "13:40", "action": "Call", "buy_reason": "PMH retest + dragonfly doji", "exit_reason": "4-wick exhaustion", "pnl": -380},
-        {"symbol": "ARM", "buy_time": "10:55", "exit_time": "14:15", "action": "Call", "buy_reason": "Strong bull flag", "exit_reason": "VWAP cross", "pnl": 920}
-    ]
+    # Generate different trades based on the selected date
+    num_trades = random.randint(2, 5)
+    todays_trades = []
+    for i in range(num_trades):
+        symbol = random.choice(watchlist)
+        pnl = round(random.uniform(-600, 1800), 0)
+        todays_trades.append({
+            "symbol": symbol,
+            "buy_time": f"0{random.randint(9,11)}:{random.randint(10,59)}",
+            "exit_time": f"{random.randint(12,15)}:{random.randint(10,59)}",
+            "action": "Call",
+            "buy_reason": random.choice(["PMH breakout + hammer", "PMH retest + dragonfly doji", "Strong bull flag + breakout", "Volume spike + confluence"]),
+            "exit_reason": random.choice(["60% profit trail", "4-wick exhaustion rule", "VWAP cross", "10% stop hit"]),
+            "pnl": pnl
+        })
     
     for trade in todays_trades:
         color = "green" if trade['pnl'] > 0 else "red"
