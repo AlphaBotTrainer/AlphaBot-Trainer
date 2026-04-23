@@ -1,106 +1,102 @@
 import streamlit as st
 import pandas as pd
-import random
+import yfinance as yf
 from datetime import datetime, timedelta
+import random
 
-st.set_page_config(
-    page_title="AlphaBot-Trainer",
-    layout="centered",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(page_title="AlphaBot-Trainer", layout="centered", initial_sidebar_state="expanded")
 
 st.title("🚀 AlphaBot-Trainer")
-st.caption("Learn the AlphaTrade strategy • Watch signals • Understand every decision")
+st.caption("Learn the AlphaTrade strategy • Real 5-min charts • Signal explanations")
 
-# Sidebar - Optional API Connection
+# Sidebar - Optional API (for future live mode)
 with st.sidebar:
-    st.header("TradeStation API (Optional)")
-    st.caption("Add your credentials for live data, otherwise simulated mode is used.")
-    
-    client_id = st.text_input("Client ID", type="password")
-    client_secret = st.text_input("Client Secret", type="password")
-    account_id = st.text_input("Account ID")
-    
-    use_live = st.checkbox("Use Live Data", value=False)
-    
-    if st.button("Connect"):
-        if client_id and client_secret and account_id:
-            st.success("✅ Connected to TradeStation (simulated connection for demo)")
-        else:
-            st.warning("Please fill in credentials for live mode")
-
-# Main Dashboard
-tab1, tab2, tab3 = st.tabs(["📊 Live Watchlist", "📝 Recent Signals", "📖 Strategy Rules"])
+    st.header("Optional Live Mode")
+    st.caption("Add TradeStation credentials for real data (future feature)")
+    st.info("Currently running in realistic simulated mode using actual market data")
 
 watchlist = ['NVDA', 'TSLA', 'ARM', 'AVGO', 'HOOD', 'IONQ', 'SMH', 'QQQ', 'SPY', 
              'AAPL', 'META', 'GOOGL', 'AMZN', 'MSFT', 'MU', 'RKLB', 'SOFI']
 
-with tab1:
-    st.subheader("Live Simulated Market")
-    
-    for symbol in watchlist:
-        with st.expander(f"📊 {symbol}", expanded=False):
-            price = round(random.uniform(80, 280), 2)
-            pm_high = round(price * 1.018, 2)
-            pm_low = round(price * 0.982, 2)
-            ema9 = round(price * 1.005, 2)
-            vwap = round(price * 1.002, 2)
-            
-            col1, col2 = st.columns(2)
+st.subheader("📊 Live Simulated Market (Realistic Data)")
+
+for symbol in watchlist:
+    try:
+        # Fetch real 5-min data for the last trading day
+        end = datetime.now()
+        start = end - timedelta(days=3)
+        df = yf.download(symbol, interval="5m", start=start, end=end, progress=False)
+        if df.empty:
+            continue
+        df = df.tail(50)  # Last ~4 hours of 5-min bars
+        
+        current_price = df['Close'].iloc[-1]
+        pm_high = df['High'].max() if len(df) > 0 else current_price * 1.02
+        pm_low = df['Low'].min() if len(df) > 0 else current_price * 0.98
+        
+        # Calculate indicators
+        df['EMA9'] = df['Close'].ewm(span=9).mean()
+        # Simple VWAP approximation
+        df['VWAP'] = (df['Close'] * df['Volume']).cumsum() / df['Volume'].cumsum()
+        
+        ema9 = df['EMA9'].iloc[-1]
+        vwap = df['VWAP'].iloc[-1]
+        
+        # Count confluence signals for buy
+        score = 0
+        if df['Close'].iloc[-1] > pm_high and df['Close'].iloc[-1] > ema9 and df['Close'].iloc[-1] > vwap:
+            score += 1  # PMH breakout
+        if df['Close'].iloc[-1] > df['Close'].iloc[-5]:  # Bullish momentum
+            score += 1
+        # Hammer / Doji simulation (simplified)
+        if (df['High'].iloc[-1] - df['Close'].iloc[-1]) < (df['Close'].iloc[-1] - df['Low'].iloc[-1]) * 0.3:
+            score += 1
+        
+        has_buy_signal = score >= 2
+        
+        # Display with green text if buy signal
+        expander_title = f"**{symbol}**" if has_buy_signal else symbol
+        with st.expander(expander_title, expanded=False):
+            col1, col2, col3 = st.columns([2, 2, 1])
             with col1:
-                st.metric("Current Price", f"${price:.2f}")
+                st.metric("Price", f"${current_price:.2f}")
                 st.metric("PM High", f"${pm_high:.2f}")
             with col2:
                 st.metric("PM Low", f"${pm_low:.2f}")
                 st.metric("9EMA", f"${ema9:.2f}")
+            with col3:
+                st.metric("Signals", f"{score}/4", delta="BUY" if has_buy_signal else None)
             
             st.metric("VWAP", f"${vwap:.2f}")
             
-            # Simulated signal with explanation
-            if random.random() > 0.6:
-                st.success(f"**BUY {symbol} Call**")
-                st.write("**Reason:** SPY daily bias is bullish + candle closed above PMH + price above 9EMA & VWAP + hammer candle + strong volume.")
-                st.caption("60% profit trail active | 10% stop | 4.5% daily cap")
+            # 5-minute chart
+            st.line_chart(df['Close'], use_container_width=True)
+            
+            if has_buy_signal:
+                st.success(f"**BUY Signal Detected** — {score} confluence factors")
+                st.caption("PMH breakout + above 9EMA & VWAP + momentum")
             else:
-                st.info("No signal at this moment")
-
-with tab2:
-    st.subheader("Recent Signals & Explanations")
-    st.info("This area shows why the bot entered or exited each trade.")
-    
-    example_signals = [
-        {"time": "09:47", "symbol": "NVDA", "action": "BUY Call", "reason": "First candle closed above PMH, above 9EMA & VWAP, bull flag + hammer, strong volume"},
-        {"time": "10:12", "symbol": "TSLA", "action": "EXIT Call", "reason": "Hit 60% profit trail after new HOD + temporary VWAP cross"},
-        {"time": "11:05", "symbol": "ARM", "action": "BUY Call", "reason": "PMH retest + dragonfly doji + volume spike"}
-    ]
-    
-    for sig in example_signals:
-        if "BUY" in sig["action"]:
-            st.success(f"**{sig['time']} — {sig['action']} {sig['symbol']}**  \n{sig['reason']}")
-        else:
-            st.warning(f"**{sig['time']} — {sig['action']} {sig['symbol']}**  \n{sig['reason']}")
-
-with tab3:
-    st.subheader("How AlphaBot Thinks – Strategy Rules")
-    st.markdown("""
-    **Entry Rules:**
-    - SPY daily direction sets call or put bias
-    - Price must break or cleanly retest pre-market high/low
-    - Must be on the correct side of both 9EMA and VWAP
-    - Needs at least 2 confluence patterns (hammer, doji, flag, etc.)
-    - Volume must be strong
-    - No recent criss-cross between 9EMA and VWAP
-
-    **Exit Rules:**
-    - Hard 10% stop-loss per trade
-    - 4.5% daily loss cap (scales with account size)
-    - 60% profit trail after making a new high or low
-    - 4-wick exhaustion rule
-    - Always close all positions at end of day (no overnight holds)
-    """)
+                st.info("No strong buy signal at this moment")
+                
+    except Exception as e:
+        st.caption(f"Could not load {symbol}")
 
 st.divider()
-st.caption("AlphaBot-Trainer • Educational simulator • Free to use and share • Built for learning the strategy")
+st.subheader("Strategy Rules – How AlphaBot Decides")
+st.markdown("""
+**Entry Rules:**
+- SPY daily bias sets call/put direction
+- Break or retest of pre-market high/low
+- Price above/below both 9EMA and VWAP
+- Confluence patterns (hammer, doji, flag, etc.)
+- Strong volume
 
-# Footer
-st.caption("Deploy this on GitHub + Streamlit Cloud for free public access")
+**Exit Rules:**
+- 10% hard stop per trade
+- 4.5% daily loss cap
+- 60% profit trail after new high/low
+- 4-wick exhaustion rule
+- Always close at end of day
+""")
+
+st.caption("AlphaBot-Trainer • Educational tool • Data from last trading day")
