@@ -76,7 +76,6 @@ with tab2:
     
     st.write("**Grouped Trades (Buy + Exit with P&L)**")
     
-    # Simulated grouped trades
     todays_trades = [
         {
             "symbol": "NVDA",
@@ -109,14 +108,14 @@ with tab2:
     
     for trade in todays_trades:
         # Color the title based on P&L
-        title_color = "green" if trade['pnl'] > 0 else "red"
-        title = f"<span style='color:{title_color}'>**{trade['symbol']} {trade['action']}**</span>"
+        color = "green" if trade['pnl'] > 0 else "red"
+        title = f":{color}[**{trade['symbol']} {trade['action']}**]"
         
         with st.expander(title, expanded=False):
             st.write(f"**Buy:** {trade['buy_time']} — {trade['buy_reason']}")
             st.write(f"**Exit:** {trade['exit_time']} — {trade['exit_reason']}")
             pnl_color = "green" if trade['pnl'] > 0 else "red"
-            st.markdown(f"**P&L:** <span style='color:{pnl_color}'>${trade['pnl']:,}</span>", unsafe_allow_html=True)
+            st.markdown(f"**P&L:** :{pnl_color}[${trade['pnl']:,}]")
 
 with tab3:
     st.subheader("Strategy Rules – How AlphaBot Decides")
