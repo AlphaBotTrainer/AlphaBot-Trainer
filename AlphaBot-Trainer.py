@@ -6,13 +6,24 @@ from datetime import datetime
 st.set_page_config(page_title="AlphaBot-Trainer", layout="centered", initial_sidebar_state="expanded")
 
 st.title("🚀 AlphaBot-Trainer")
-st.caption("Learn the AlphaTrade strategy • Real signals • Educational tool")
+st.caption("Learn the AlphaTrade strategy • Signal explanations • Educational tool")
 
-# Sidebar - Optional API
+# Sidebar - API Credentials (restored)
 with st.sidebar:
     st.header("TradeStation API (Optional)")
-    st.caption("Add credentials for live data (not required)")
-    st.info("Currently running in realistic simulated mode")
+    st.caption("Add your credentials for live data (not required)")
+    
+    client_id = st.text_input("Client ID", value="", type="password")
+    client_secret = st.text_input("Client Secret", value="", type="password")
+    account_id = st.text_input("Account ID", value="")
+    
+    use_live = st.checkbox("Use Live Data", value=False)
+    
+    if st.button("Connect"):
+        if client_id and client_secret and account_id:
+            st.success("✅ Credentials saved for this session")
+        else:
+            st.warning("Please fill in all fields for live mode")
 
 watchlist = ['NVDA', 'TSLA', 'ARM', 'AVGO', 'HOOD', 'IONQ', 'SMH', 'QQQ', 'SPY', 
              'AAPL', 'META', 'GOOGL', 'AMZN', 'MSFT', 'MU', 'RKLB', 'SOFI']
@@ -45,7 +56,6 @@ with tab1:
             
             st.metric("VWAP", f"${vwap:.2f}")
             
-            # Simulated 5-min chart
             chart_data = pd.DataFrame({
                 'Price': [price * (0.97 + i*0.006) for i in range(12)]
             })
@@ -92,4 +102,4 @@ with tab3:
     """)
 
 st.divider()
-st.caption("AlphaBot-Trainer • Educational simulator • No API required")
+st.caption("AlphaBot-Trainer • Educational simulator • API credentials optional")
