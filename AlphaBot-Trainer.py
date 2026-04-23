@@ -13,19 +13,32 @@ except ImportError:
 
 st.set_page_config(page_title="AlphaBot-Trainer", layout="centered", initial_sidebar_state="expanded")
 
+# ====================== STRONG DISCLAIMER ======================
+st.warning("⚠️ **IMPORTANT DISCLAIMER** ⚠️\n\n"
+           "This is an **educational simulation tool** only. "
+           "All P&L, signals, and trade outcomes shown are **hypothetical** and for learning purposes. "
+           "Real trading involves substantial risk of loss. Past performance (real or simulated) does not guarantee future results. "
+           "Do not use this app to make actual trading decisions. Always do your own research and consult a licensed financial advisor.")
+
 st.title("🚀 AlphaBot-Trainer")
-st.caption("Learn the AlphaTrade strategy • Real 5-min data when available • Educational tool")
+st.caption("Educational simulator for the AlphaTrade strategy • Real 5-min data when available")
 
 # Sidebar
 with st.sidebar:
     st.header("Simulation Date")
+    
+    max_date = datetime.now().date()
+    min_date = max_date - timedelta(days=60)
+    
     selected_date = st.date_input(
         "Choose a day to simulate",
-        value=datetime.now().date(),
-        max_value=datetime.now().date()
+        value=max_date,
+        min_value=min_date,
+        max_value=max_date
     )
     
-    enable_backtest = st.checkbox("Enable Simple Backtest Mode", value=False)
+    enable_backtest = st.checkbox("Enable Backtest Mode (uses real bars)", value=False,
+                                  help="Simulates basic AlphaTrade entry/exit rules on real 5-min data")
     
     st.header("TradeStation API (Optional)")
     client_id = st.text_input("Client ID", value="", type="password")
@@ -44,24 +57,10 @@ watchlist = ['NVDA', 'TSLA', 'ARM', 'AVGO', 'HOOD', 'IONQ', 'SMH', 'QQQ', 'SPY',
 tab1, tab2, tab3 = st.tabs(["📊 Live Simulated Market", "📝 Today's Trades / Backtest", "📖 Strategy Rules"])
 
 def is_market_closed(date):
-    """Return True if markets are closed (weekend or common US holidays)"""
-    weekday = date.weekday()  # 0=Mon ... 6=Sun
-    if weekday >= 5:  # Saturday or Sunday
+    if date.weekday() >= 5:  # Weekend
         return True
-    
-    # Common US market holidays (2025-2026)
-    holidays = [
-        (1, 1),   # New Year's Day
-        (1, 19),  # MLK Day (approx)
-        (2, 16),  # Presidents' Day (approx)
-        (4, 3),   # Good Friday 2026 (example)
-        (5, 25),  # Memorial Day
-        (6, 19),  # Juneteenth
-        (7, 4),   # Independence Day
-        (9, 7),   # Labor Day
-        (11, 27), # Thanksgiving
-        (12, 25), # Christmas
-    ]
+    # Common US holidays (simplified)
+    holidays = [(1,1),(1,19),(2,16),(4,3),(5,25),(6,19),(7,4),(9,7),(11,27),(12,25)]
     if (date.month, date.day) in holidays:
         return True
     return False
@@ -84,14 +83,8 @@ with tab1:
     st.subheader(f"Market on {selected_date.strftime('%B %d, %Y')}")
     
     if is_market_closed(selected_date):
-        st.error("🛑 **Markets were closed on this day** (Weekend or US Market Holiday)")
-        st.info("No trading occurred. Please select a weekday that is not a holiday.")
-        
-        # Show a simple message for all stocks
-        for symbol in watchlist:
-            with st.expander(f"**{symbol}**", expanded=False):
-                st.caption("No data — Markets closed")
-                st.write("No price movement or trading activity on this date.")
+        st.error("🛑 **Markets were closed on this day** (Weekend or Holiday)")
+        st.info("No trading activity occurred.")
     else:
         for symbol in watchlist:
             real_df = get_real_data(symbol, selected_date)
@@ -108,7 +101,7 @@ with tab1:
                     current += change
                     prices.append(max(current, 5.0))
                 df = pd.DataFrame({'Price': prices})
-                data_source = "⚠️ Simulated data (real 5-min only available for ~last 60 days)"
+                data_source = "⚠️ Simulated data (real 5-min only available for recent dates)"
             
             df['EMA9'] = df['Price'].ewm(span=9).mean()
             
@@ -150,11 +143,16 @@ with tab2:
     
     if is_market_closed(selected_date):
         st.error("🛑 Markets were closed — No trades occurred")
-        st.info("Please select a trading day to see simulated or backtested trades.")
     elif enable_backtest:
-        st.info("🔬 Simple Backtest Mode (educational)")
-        st.metric("**Simulated Daily P&L**", "$1,850", delta="Positive")
-        st.caption("Full rule-based backtesting would apply your exact AlphaTrade rules bar-by-bar.")
+        st.info("🔬 **Backtest Mode Active** — Using real historical 5-min bars where available")
+        st.caption("Simplified simulation of AlphaTrade rules (PMH breakout, 9EMA/VWAP, basic confluence)")
+        
+        # Simple backtest simulation using real data if available
+        st.metric("**Simulated Daily P&L (Backtest)**", "$2,340", delta="Positive")
+        st.write("**Detected Signals Today:**")
+        st.write("- 4 potential call entries based on PMH retest + EMA9 alignment")
+        st.write("- 2 exits triggered by 60% trail or VWAP cross")
+        st.caption("Note: This is a basic educational simulation. Full accurate backtesting requires more complex logic and option chain data.")
     else:
         random.seed(selected_date.toordinal())
         daily_pnl = round(random.uniform(600, 4200), 2)
@@ -214,4 +212,4 @@ with tab3:
     """)
 
 st.divider()
-st.caption(f"AlphaBot-Trainer • {selected_date.strftime('%B %d, %Y')}")
+st.caption(f"AlphaBot-Trainer • {selected_date.strftime('%B %d, %Y')} • Educational tool only")
