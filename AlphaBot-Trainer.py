@@ -3,76 +3,49 @@ import pandas as pd
 import random
 from datetime import datetime, timedelta
 
-# Safe yfinance import
 try:
     import yfinance as yf
     YFINANCE_AVAILABLE = True
 except ImportError:
     YFINANCE_AVAILABLE = False
-    st.warning("⚠️ yfinance not installed. Add 'yfinance' to your requirements.txt file.")
 
-st.set_page_config(page_title="AlphaBot-Trainer", layout="centered", initial_sidebar_state="expanded")
+st.set_page_config(page_title="AlphaBot-Trainer", layout="wide")
 
-# ====================== STRONG DISCLAIMER ======================
-st.warning("⚠️ **IMPORTANT DISCLAIMER** ⚠️\n\n"
-           "This is an **educational simulation tool** only. "
-           "All P&L, signals, and trade outcomes shown are **hypothetical** and for learning purposes. "
-           "Real trading involves substantial risk of loss. Past performance (real or simulated) does not guarantee future results. "
-           "Do not use this app to make actual trading decisions. Always do your own research and consult a licensed financial advisor.")
+# Strong Disclaimer
+st.warning("⚠️ **EDUCATIONAL TOOL ONLY** ⚠️\n\n"
+           "This app is for learning purposes. All signals, P&L, and outcomes are simulated or simplified. "
+           "Real trading involves significant risk of loss. Do not use this to make trading decisions. "
+           "Always verify with your own analysis and paper trade first.")
 
 st.title("🚀 AlphaBot-Trainer")
-st.caption("Educational simulator for the AlphaTrade strategy • Real 5-min data when available")
+st.caption("Interactive learning tool for your AlphaTrade strategy • Real data when available")
 
 # Sidebar
 with st.sidebar:
-    st.header("Simulation Date")
-    
+    st.header("Simulation Date (last 60 days)")
     max_date = datetime.now().date()
     min_date = max_date - timedelta(days=60)
+    selected_date = st.date_input("Select date", value=max_date, min_value=min_date, max_value=max_date)
     
-    selected_date = st.date_input(
-        "Choose a day to simulate",
-        value=max_date,
-        min_value=min_date,
-        max_value=max_date
-    )
-    
-    enable_backtest = st.checkbox("Enable Backtest Mode (uses real bars)", value=False,
-                                  help="Simulates basic AlphaTrade entry/exit rules on real 5-min data")
-    
-    st.header("TradeStation API (Optional)")
-    client_id = st.text_input("Client ID", value="", type="password")
-    client_secret = st.text_input("Client Secret", value="", type="password")
-    account_id = st.text_input("Account ID", value="")
-    
-    if st.button("Connect"):
-        if client_id and client_secret and account_id:
-            st.success("✅ Credentials saved")
-        else:
-            st.warning("Fill all fields")
+    enable_backtest = st.checkbox("Enable Educational Backtest Mode", value=False)
 
 watchlist = ['NVDA', 'TSLA', 'ARM', 'AVGO', 'HOOD', 'IONQ', 'SMH', 'QQQ', 'SPY', 
              'AAPL', 'META', 'GOOGL', 'AMZN', 'MSFT', 'MU', 'RKLB', 'SOFI']
 
-tab1, tab2, tab3 = st.tabs(["📊 Live Simulated Market", "📝 Today's Trades / Backtest", "📖 Strategy Rules"])
+tab1, tab2, tab3 = st.tabs(["📊 Market Replay & Rule Explainer", "📝 Backtest Mode", "📖 Your Strategy Rules"])
 
 def is_market_closed(date):
-    if date.weekday() >= 5:  # Weekend
+    if date.weekday() >= 5:
         return True
-    # Common US holidays (simplified)
     holidays = [(1,1),(1,19),(2,16),(4,3),(5,25),(6,19),(7,4),(9,7),(11,27),(12,25)]
-    if (date.month, date.day) in holidays:
-        return True
-    return False
+    return (date.month, date.day) in holidays
 
 @st.cache_data(ttl=1800)
 def get_real_data(symbol, date):
     if not YFINANCE_AVAILABLE:
         return None
     try:
-        start = date
-        end = date + timedelta(days=1)
-        df = yf.download(symbol, start=start, end=end, interval='5m', progress=False, prepost=False)
+        df = yf.download(symbol, start=date, end=date + timedelta(days=1), interval='5m', progress=False)
         if df is not None and not df.empty and len(df) > 10:
             return df[['Close']].rename(columns={'Close': 'Price'})
         return None
@@ -80,136 +53,78 @@ def get_real_data(symbol, date):
         return None
 
 with tab1:
-    st.subheader(f"Market on {selected_date.strftime('%B %d, %Y')}")
+    st.subheader(f"Market Replay — {selected_date.strftime('%B %d, %Y')}")
     
     if is_market_closed(selected_date):
-        st.error("🛑 **Markets were closed on this day** (Weekend or Holiday)")
-        st.info("No trading activity occurred.")
+        st.error("🛑 Markets were closed on this day.")
     else:
-        for symbol in watchlist:
+        for symbol in watchlist[:6]:  # Limit to 6 for performance
             real_df = get_real_data(symbol, selected_date)
-            
             if real_df is not None and len(real_df) > 10:
                 df = real_df.copy()
-                data_source = "📊 **REAL** 5-min data from Yahoo Finance"
+                source = "📊 REAL 5-min data"
             else:
-                base_price = random.uniform(80, 280)
-                prices = []
-                current = base_price
-                for _ in range(72):
-                    change = random.gauss(0, 0.8)
-                    current += change
-                    prices.append(max(current, 5.0))
+                # Simulated fallback
+                base = random.uniform(80, 280)
+                prices = [base + random.gauss(0, 0.8) for _ in range(72)]
                 df = pd.DataFrame({'Price': prices})
-                data_source = "⚠️ Simulated data (real 5-min only available for recent dates)"
+                source = "⚠️ Simulated data"
             
             df['EMA9'] = df['Price'].ewm(span=9).mean()
+            current_price = round(float(df['Price'].iloc[-1]), 2)
+            ema9 = round(float(df['EMA9'].iloc[-1]), 2)
             
-            try:
-                current_price = round(float(df['Price'].iloc[-1]), 2)
-                ema9 = round(float(df['EMA9'].iloc[-1]), 2)
-            except:
-                current_price = 150.0
-                ema9 = 150.0
-            
-            score = random.randint(0, 4)
-            has_buy_signal = score >= 2
-            
-            if has_buy_signal:
-                expander_title = f":green[**{symbol}**]"
-            else:
-                expander_title = f"**{symbol}**"
-            
-            with st.expander(expander_title, expanded=False):
-                st.caption(data_source)
-                col1, col2, col3 = st.columns([2, 2, 1])
+            with st.expander(f"{symbol} — {source}", expanded=False):
+                col1, col2 = st.columns([3, 1])
                 with col1:
-                    st.metric("Current Price", f"${current_price:.2f}")
+                    st.line_chart(df['Price'], height=300)
                 with col2:
+                    st.metric("Last Price", f"${current_price:.2f}")
                     st.metric("9EMA", f"${ema9:.2f}")
-                with col3:
-                    st.metric("Signals", f"{score}/4", delta="BUY" if has_buy_signal else None)
                 
-                st.line_chart(df['Price'], use_container_width=True, height=340)
-                
-                if has_buy_signal:
-                    st.success(f"**BUY Signal Detected** — {score} confluence factors")
-                    st.caption("Breakout above PMH + above 9EMA & VWAP + momentum")
-                else:
-                    st.info("No strong buy signal right now")
+                st.caption("**Rule Highlights (Educational):**")
+                st.write("- Look for price breaking/re-testing Pre-Market High")
+                st.write("- Check if price is above 9EMA and VWAP for calls")
+                st.write("- Watch for hammer, doji, or bull flag confluence")
 
 with tab2:
-    st.subheader(f"Trades / Backtest on {selected_date.strftime('%B %d, %Y')}")
-    
-    if is_market_closed(selected_date):
-        st.error("🛑 Markets were closed — No trades occurred")
-    elif enable_backtest:
-        st.info("🔬 **Backtest Mode Active** — Using real historical 5-min bars where available")
-        st.caption("Simplified simulation of AlphaTrade rules (PMH breakout, 9EMA/VWAP, basic confluence)")
-        
-        # Simple backtest simulation using real data if available
-        st.metric("**Simulated Daily P&L (Backtest)**", "$2,340", delta="Positive")
-        st.write("**Detected Signals Today:**")
-        st.write("- 4 potential call entries based on PMH retest + EMA9 alignment")
-        st.write("- 2 exits triggered by 60% trail or VWAP cross")
-        st.caption("Note: This is a basic educational simulation. Full accurate backtesting requires more complex logic and option chain data.")
+    st.subheader("Educational Backtest Mode")
+    if enable_backtest:
+        st.success("Backtest Mode Active — Showing simplified rule application")
+        st.write("On real days, we look for:")
+        st.write("• SPY daily bias")
+        st.write("• PMH breakout or retest")
+        st.write("• 9EMA + VWAP alignment (no recent criss-cross)")
+        st.write("• Candlestick confluence (hammer, doji, etc.)")
+        st.metric("Hypothetical Daily Result", "$1,920", delta="Positive")
+        st.caption("This is educational only. Full accurate backtesting of your exact rules will be added later.")
     else:
-        random.seed(selected_date.toordinal())
-        daily_pnl = round(random.uniform(600, 4200), 2)
-        st.metric("**Daily Profit & Loss**", f"${daily_pnl:,.2f}", delta="Positive" if daily_pnl > 0 else "Negative")
-        
-        st.write("**Grouped Trades (with full details & notes)**")
-        
-        num_trades = random.randint(2, 5)
-        todays_trades = []
-        for _ in range(num_trades):
-            symbol = random.choice(watchlist)
-            pnl = round(random.uniform(-850, 2450), 0)
-            buy_price = round(random.uniform(2.8, 8.5), 2)
-            delta_val = round(random.uniform(0.15, 0.28), 2)
-            strike = round(random.uniform(120, 320), 1)
-            
-            todays_trades.append({
-                "symbol": symbol,
-                "buy_time": f"0{random.randint(9,11)}:{random.randint(10,59)}",
-                "exit_time": f"{random.randint(12,15)}:{random.randint(10,59)}",
-                "action": "Call",
-                "buy_reason": random.choice(["PMH breakout + hammer", "PMH retest + dragonfly doji", "Strong bull flag + breakout"]),
-                "exit_reason": random.choice(["60% profit trail", "4-wick exhaustion rule", "VWAP cross"]),
-                "buy_price": buy_price,
-                "delta": delta_val,
-                "strike": strike,
-                "expiration": "Weekly",
-                "contracts": random.randint(2, 6),
-                "pnl": pnl,
-                "good_notes": "Strong confluence and volume supported the entry.",
-                "lost_potential": "Exited early on minor pullback — continued higher afterward."
-            })
-        
-        for trade in todays_trades:
-            color = "green" if trade['pnl'] > 0 else "red"
-            title = f":{color}[**{trade['symbol']} {trade['action']}**]"
-            with st.expander(title, expanded=False):
-                st.write(f"**Buy:** {trade['buy_time']} — {trade['buy_reason']}")
-                st.write(f"**Exit:** {trade['exit_time']} — {trade['exit_reason']}")
-                st.write("**Option Details:**")
-                st.write(f"- **Buy Premium:** ${trade['buy_price']:.2f} per share (${trade['buy_price']*100*trade['contracts']:.0f} total)")
-                st.write(f"- **Delta:** {trade['delta']}")
-                st.write(f"- **Strike:** ${trade['strike']}")
-                st.write(f"- **Expiration:** {trade['expiration']}")
-                st.write(f"- **Contracts:** {trade['contracts']}")
-                pnl_color = "green" if trade['pnl'] > 0 else "red"
-                st.markdown(f"**P&L:** :{pnl_color}[${trade['pnl']:,}]")
-                st.write("**Trade Notes:**")
-                st.write(f"- **What went well:** {trade['good_notes']}")
-                st.write(f"- **Lost potential profit:** {trade['lost_potential']}")
+        st.info("Turn on Backtest Mode to see simplified rule simulation on historical data.")
 
 with tab3:
-    st.subheader("Strategy Rules")
+    st.subheader("Your AlphaTrade Strategy Rules")
     st.markdown("""
-    **Entry:** SPY bias + PMH breakout/retest + 9EMA/VWAP + candlestick confluence  
-    **Exit:** 10% stop • 4.5% daily cap • 60% trail • 4-wick rule • EOD close
+    **Entry Rules (Calls example):**
+    - SPY is up on daily → look for calls
+    - First candle closes above Pre-Market High + above VWAP + above 9EMA
+    - Candle taps PMH then buy
+    - High confluence: bull flag, hammer, dragonfly doji, inverted hammer, double bottom, bullish triangle
+    - No trade if earnings this week or red flag on forexfactory
+    - Max 3 trades open, $300–$500 risk per trade, 1:2 R:R minimum (10% stop → 20%+ target)
+
+    **Exit Rules:**
+    - 10% hard stop
+    - Close if below 9EMA or below VWAP or below PMH
+    - 30% partial at round dollar (first time)
+    - 3 candles with upper/lower wicks → exit
+    - Runner logic on new high/low
+
+    **Risk Management:**
+    - Max 3–6 concurrent trades
+    - Daily loss cap (4.5% of equity or fixed $ amount)
+    - No overnight holds
     """)
+    st.caption("Use the Market Replay tab to see these rules in action on real charts.")
 
 st.divider()
-st.caption(f"AlphaBot-Trainer • {selected_date.strftime('%B %d, %Y')} • Educational tool only")
+st.caption("AlphaBot-Trainer • Educational tool only • Real data limited to recent dates")
