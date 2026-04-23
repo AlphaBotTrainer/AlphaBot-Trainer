@@ -74,9 +74,9 @@ with tab2:
     st.subheader(f"📝 Today's Trades & P&L")
     st.metric("**Daily Profit & Loss**", f"${daily_pnl:,.2f}", delta="Positive" if daily_pnl > 0 else "Negative")
     
-    st.write("**Grouped Trades (Buy + Exit)**")
+    st.write("**Grouped Trades (Buy + Exit with P&L)**")
     
-    # Simulated grouped trades with P&L
+    # Simulated grouped trades
     todays_trades = [
         {
             "symbol": "NVDA",
@@ -108,7 +108,11 @@ with tab2:
     ]
     
     for trade in todays_trades:
-        with st.expander(f"{trade['symbol']} {trade['action']}"):
+        # Color the title based on P&L
+        title_color = "green" if trade['pnl'] > 0 else "red"
+        title = f"<span style='color:{title_color}'>**{trade['symbol']} {trade['action']}**</span>"
+        
+        with st.expander(title, expanded=False):
             st.write(f"**Buy:** {trade['buy_time']} — {trade['buy_reason']}")
             st.write(f"**Exit:** {trade['exit_time']} — {trade['exit_reason']}")
             pnl_color = "green" if trade['pnl'] > 0 else "red"
