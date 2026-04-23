@@ -6,7 +6,7 @@ from datetime import datetime
 st.set_page_config(page_title="AlphaBot-Trainer", layout="centered", initial_sidebar_state="expanded")
 
 st.title("🚀 AlphaBot-Trainer")
-st.caption("Learn the AlphaTrade strategy • Grouped trades with full option details • Educational tool")
+st.caption("Learn the AlphaTrade strategy • Grouped trades with detailed notes • Educational tool")
 
 # Sidebar - Optional API
 with st.sidebar:
@@ -76,7 +76,7 @@ with tab2:
     daily_pnl = round(random.uniform(800, 3200), 2)
     st.metric("**Daily Profit & Loss**", f"${daily_pnl:,.2f}", delta="Positive" if daily_pnl > 0 else "Negative")
     
-    st.write("**Grouped Trades (Buy + Exit with full option details)**")
+    st.write("**Grouped Trades (Buy + Exit with detailed notes)**")
     
     todays_trades = [
         {
@@ -91,7 +91,9 @@ with tab2:
             "strike": 142.50,
             "expiration": "Weekly",
             "contracts": 4,
-            "pnl": 1240
+            "pnl": 1240,
+            "good_notes": "Excellent entry on confluence and volume. Trail captured a large portion of the move.",
+            "lost_potential": "Left ~$680 on the table. Could have trailed at 50% instead of 60% or ignored minor pullback."
         },
         {
             "symbol": "TSLA",
@@ -105,7 +107,9 @@ with tab2:
             "strike": 318.00,
             "expiration": "Weekly",
             "contracts": 3,
-            "pnl": -380
+            "pnl": -380,
+            "good_notes": "Good entry timing on retest with doji confirmation.",
+            "lost_potential": "Exited too early on minor wick exhaustion. The stock reversed and continued higher later."
         },
         {
             "symbol": "ARM",
@@ -119,7 +123,9 @@ with tab2:
             "strike": 148.50,
             "expiration": "Weekly",
             "contracts": 5,
-            "pnl": 920
+            "pnl": 920,
+            "good_notes": "Strong confluence entry on bull flag breakout.",
+            "lost_potential": "Missed additional $450 as the stock continued running after temporary VWAP cross."
         }
     ]
     
@@ -140,6 +146,10 @@ with tab2:
             
             pnl_color = "green" if trade['pnl'] > 0 else "red"
             st.markdown(f"**P&L for this trade:** :{pnl_color}[${trade['pnl']:,}]")
+            
+            st.write("**Trade Notes:**")
+            st.write(f"- **What went well:** {trade['good_notes']}")
+            st.write(f"- **Lost potential profit:** {trade['lost_potential']}")
 
 with tab3:
     st.subheader("Strategy Rules – How AlphaBot Decides")
@@ -160,4 +170,4 @@ with tab3:
     """)
 
 st.divider()
-st.caption("AlphaBot-Trainer • Educational simulator • Full option details shown")
+st.caption("AlphaBot-Trainer • Educational simulator with detailed trade notes")
