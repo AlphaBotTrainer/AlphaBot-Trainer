@@ -6,7 +6,7 @@ from datetime import datetime
 st.set_page_config(page_title="AlphaBot-Trainer", layout="centered", initial_sidebar_state="expanded")
 
 st.title("🚀 AlphaBot-Trainer")
-st.caption("Learn the AlphaTrade strategy • Tighter 5-min charts • Educational tool")
+st.caption("Learn the AlphaTrade strategy • Tight 5-min charts • Educational tool")
 
 # Sidebar - Date Picker + Optional API
 with st.sidebar:
@@ -72,14 +72,19 @@ with tab1:
             with col3:
                 st.metric("Signals", f"{score}/4", delta="BUY" if has_buy_signal else None)
             
-            # Tighter vertical range for better visibility
-            min_price = df['Price'].min() * 0.992
-            max_price = df['Price'].max() * 1.008
+            # Tightest possible range - no extra empty space
+            min_price = df['Price'].min()
+            max_price = df['Price'].max()
+            
+            # Add tiny buffer only if needed to prevent flat line issues
+            if max_price - min_price < 0.5:
+                min_price -= 0.1
+                max_price += 0.1
             
             st.line_chart(
                 df['Price'], 
                 use_container_width=True, 
-                height=340
+                height=380
             )
             
             if has_buy_signal:
