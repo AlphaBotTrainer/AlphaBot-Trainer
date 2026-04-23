@@ -1,15 +1,22 @@
 import streamlit as st
 import pandas as pd
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 
 st.set_page_config(page_title="AlphaBot-Trainer", layout="centered", initial_sidebar_state="expanded")
 
 st.title("🚀 AlphaBot-Trainer")
-st.caption("Learn the AlphaTrade strategy • Full-day 5-min charts • Educational tool")
+st.caption("Learn the AlphaTrade strategy • Historical + Today simulation • Educational tool")
 
-# Sidebar
+# Sidebar - Date Picker + Optional API
 with st.sidebar:
+    st.header("Simulation Date")
+    selected_date = st.date_input(
+        "Choose a day to simulate",
+        value=datetime.now().date(),
+        max_value=datetime.now().date()
+    )
+    
     st.header("TradeStation API (Optional)")
     st.caption("Add credentials for live data (not required)")
     
@@ -31,52 +38,50 @@ watchlist = ['NVDA', 'TSLA', 'ARM', 'AVGO', 'HOOD', 'IONQ', 'SMH', 'QQQ', 'SPY',
 tab1, tab2, tab3 = st.tabs(["📊 Live Simulated Market", "📝 Today's Trades", "📖 Strategy Rules"])
 
 with tab1:
-    st.subheader("Live Simulated Market - Full Day 5-min Charts")
+    st.subheader(f"Simulated Market — {selected_date.strftime('%B %d, %Y')}")
     
     for symbol in watchlist:
-        # Generate realistic full-day 5-min data
-        base_price = random.uniform(80, 280)
-        prices = []
-        current = base_price
-        for i in range(72):
-            change = random.gauss(0, 0.8)
-            current += change
-            prices.append(max(current, 5.0))
-        
-        df = pd.DataFrame({'Price': prices})
-        df['EMA9'] = df['Price'].ewm(span=9).mean()
-        
-        current_price = round(df['Price'].iloc[-1], 2)
-        ema9 = round(df['EMA9'].iloc[-1], 2)
-        
-        score = random.randint(0, 4)
-        has_buy_signal = score >= 2
-        
-        # Clean green title for buy signals
-        if has_buy_signal:
-            expander_title = f":green[**{symbol}**]"
-        else:
-            expander_title = f"**{symbol}**"
-        
-        with st.expander(expander_title, expanded=False):
-            col1, col2, col3 = st.columns([2, 2, 1])
-            with col1:
-                st.metric("Current Price", f"${current_price:.2f}")
-            with col2:
-                st.metric("9EMA", f"${ema9:.2f}")
-            with col3:
-                st.metric("Signals", f"{score}/4", delta="BUY" if has_buy_signal else None)
+        with st.expander(f"**{symbol}**", expanded=False):
+            # Generate realistic 5-min data for the selected day
+            base_price = random.uniform(80, 280)
+            prices = []
+            current = base_price
             
-            st.line_chart(df['Price'], use_container_width=True, height=320)
+            for i in range(78):  # ~6.5 hours of 5-min bars
+                change = random.gauss(0, 0.85)
+                current += change
+                prices.append(max(current, 5.0))
             
-            if has_buy_signal:
-                st.success(f"**BUY Signal Detected** — {score} confluence factors")
-                st.caption("Breakout above PMH + above 9EMA & VWAP + momentum")
-            else:
-                st.info("No strong buy signal right now")
+            df = pd.DataFrame({'Price': prices})
+            df['EMA9'] = df['Price'].ewm(span=9).mean()
+            
+            current_price = round(df['Price'].iloc[-1], 2)
+            ema9 = round(df['EMA9'].iloc[-1], 2)
+            
+            score = random.randint(0, 4)
+            has_buy_signal = score >= 2
+            
+            title = f":green[**{symbol}**]" if has_buy_signal else f"**{symbol}**"
+            
+            with st.expander(title, expanded=False):
+                col1, col2, col3 = st.columns([2, 2, 1])
+                with col1:
+                    st.metric("Current Price", f"${current_price:.2f}")
+                with col2:
+                    st.metric("9EMA", f"${ema9:.2f}")
+                with col3:
+                    st.metric("Signals", f"{score}/4", delta="BUY" if has_buy_signal else None)
+                
+                st.line_chart(df['Price'], use_container_width=True, height=320)
+                
+                if has_buy_signal:
+                    st.success(f"**BUY Signal Detected** — {score} confluence factors")
+                    st.caption("Breakout above PMH + above 9EMA & VWAP + momentum")
+                else:
+                    st.info("No strong buy signal right now")
 
 with tab2:
-    st.subheader("📝 Today's Trades & P&L")
+    st.subheader(f"📝 Trades on {selected_date.strftime('%B %d, %Y')}")
     daily_pnl = round(random.uniform(800, 3200), 2)
     st.metric("**Daily Profit & Loss**", f"${daily_pnl:,.2f}", delta="Positive" if daily_pnl > 0 else "Negative")
     
@@ -116,4 +121,4 @@ with tab3:
     """)
 
 st.divider()
-st.caption("AlphaBot-Trainer • Educational simulator • Full-day 5-min charts")
+st.caption(f"AlphaBot-Trainer • Showing simulated data for {selected_date.strftime('%B %d, %Y')} • Educational tool")
