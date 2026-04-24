@@ -51,29 +51,49 @@ with tab1:
         df = get_spy_data(selected_date)
         
         if df is not None and not df.empty:
-            # Real Data Chart
-            fig = go.Figure(data=[go.Candlestick(
-                x=df.index,
-                open=df['Open'],
-                high=df['High'],
-                low=df['Low'],
-                close=df['Close'],
-                increasing_line_color='green',
-                decreasing_line_color='red'
-            )])
-            fig.update_layout(height=650, title="✅ Real SPY 5-Minute Candlesticks")
-            st.plotly_chart(fig, use_container_width=True)
-            
-            last_price = float(df['Close'].iloc[-1])
-            st.metric("Last Price", f"${last_price:.2f}")
-            st.success("✅ Using real market data")
+            try:
+                fig = go.Figure(data=[go.Candlestick(
+                    x=df.index,
+                    open=df['Open'],
+                    high=df['High'],
+                    low=df['Low'],
+                    close=df['Close'],
+                    increasing_line_color='green',
+                    decreasing_line_color='red'
+                )])
+                fig.update_layout(height=650, title="SPY 5-Minute Real Candlesticks")
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Ultra-safe price extraction
+                raw_price = df['Close'].iloc[-1]
+                current_price = float(raw_price.item() if hasattr(raw_price, 'item') else raw_price)
+                st.metric("Last Price", f"${current_price:.2f}")
+                st.success("✅ Real data loaded")
+            except Exception as e:
+                st.error(f"Chart error: {str(e)}")
+                st.info("Showing simulated chart instead.")
+                # Simulated fallback
+                base = 580.0
+                times = pd.date_range(start=selected_date, periods=72, freq='5min')
+                prices = [base + i*0.2 + random.gauss(0, 1.5) for i in range(72)]
+                fig_sim = go.Figure(data=[go.Candlestick(
+                    x=times,
+                    open=[p-0.5 for p in prices],
+                    high=[p+1 for p in prices],
+                    low=[p-1 for p in prices],
+                    close=prices,
+                    increasing_line_color='green',
+                    decreasing_line_color='red'
+                )])
+                fig_sim.update_layout(height=500, title="Simulated SPY 5-Min Candles")
+                st.plotly_chart(fig_sim, use_container_width=True)
         else:
-            # Simulated fallback - only one chart
-            st.warning("⚠️ No real data available for this date → Showing simulated chart")
+            st.warning("No real data available for this date.")
+            st.info("Showing simulated chart for demonstration.")
+            # Same simulated chart as above
             base = 580.0
             times = pd.date_range(start=selected_date, periods=72, freq='5min')
             prices = [base + i*0.2 + random.gauss(0, 1.5) for i in range(72)]
-            
             fig_sim = go.Figure(data=[go.Candlestick(
                 x=times,
                 open=[p-0.5 for p in prices],
@@ -83,7 +103,7 @@ with tab1:
                 increasing_line_color='green',
                 decreasing_line_color='red'
             )])
-            fig_sim.update_layout(height=550, title="Simulated SPY 5-Minute Candles (for demonstration)")
+            fig_sim.update_layout(height=500, title="Simulated SPY 5-Min Candles")
             st.plotly_chart(fig_sim, use_container_width=True)
 
 with tab2:
@@ -91,7 +111,7 @@ with tab2:
     if is_market_closed(selected_date):
         st.error("No trades — Market closed")
     else:
-        st.info("Educational simulated trades (for learning)")
+        st.info("Educational simulated trades")
         st.metric("Simulated Daily P&L", "$1,650", delta="Positive")
 
 with tab3:
