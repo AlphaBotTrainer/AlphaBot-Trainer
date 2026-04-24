@@ -13,11 +13,11 @@ except ImportError:
 st.set_page_config(page_title="AlphaBot-Trainer", layout="wide")
 
 st.warning("⚠️ **EDUCATIONAL TOOL ONLY** ⚠️\n\n"
-           "This is a learning simulator. All signals, trades, and P&L are for educational purposes only. "
-           "Real trading involves substantial risk of loss. Do not use this app to make trading decisions.")
+           "This is a learning simulator. Signals, trades, and P&L are for education only. "
+           "Real trading involves substantial risk of loss. Do not trade based on this app.")
 
 st.title("🚀 AlphaBot-Trainer")
-st.caption("SPY Focus • Real Candlestick Chart + Full Strategy Learning")
+st.caption("SPY Real Candlestick Focus + Full Strategy Learning")
 
 # Sidebar
 with st.sidebar:
@@ -52,7 +52,8 @@ with tab1:
     st.subheader(f"SPY Real Candlestick Chart — {selected_date.strftime('%B %d, %Y')}")
     
     if is_market_closed(selected_date):
-        st.error("🛑 Markets were closed on this day (weekend or holiday).")
+        st.error("🛑 Markets were closed on this day.")
+        current_price = 0.0
     else:
         df = get_spy_data(selected_date)
         
@@ -78,10 +79,10 @@ with tab1:
             
             current_price = df['Close'].iloc[-1]
             st.metric("Last Price", f"${current_price:.2f}")
-            
-            st.caption("**Learning Focus:** Look for candles closing above Pre-Market High, staying above 9EMA/VWAP, and candlestick patterns (hammer, doji, bull flag).")
+            st.caption("**Learning Tip:** Look for closes above Pre-Market High, staying above 9EMA/VWAP, and strong candlestick patterns.")
         else:
-            st.error("No real data available for this date. Try a more recent trading day.")
+            st.error("No real data available for this date. Try a recent trading day (within last ~60 days).")
+            current_price = 0.0
 
 with tab2:
     st.subheader(f"Trades on {selected_date.strftime('%B %d, %Y')}")
@@ -89,19 +90,18 @@ with tab2:
     if is_market_closed(selected_date):
         st.error("Markets were closed — No trades occurred.")
     elif enable_backtest:
-        st.info("🔬 Educational Backtest Mode Active")
+        st.info("🔬 Educational Backtest Mode")
         st.metric("**Simulated Daily P&L**", "$1,920", delta="Positive")
-        st.caption("Simplified simulation of your AlphaTrade rules on historical price action.")
     else:
         random.seed(selected_date.toordinal())
         daily_pnl = round(random.uniform(600, 4200), 2)
         st.metric("**Daily Profit & Loss**", f"${daily_pnl:,.2f}", delta="Positive" if daily_pnl > 0 else "Negative")
         
-        st.write("**Grouped Trades (Buy + Exit with details & notes)**")
+        st.write("**Grouped Trades (with details & notes)**")
         num_trades = random.randint(2, 5)
         todays_trades = []
         for _ in range(num_trades):
-            symbol = random.choice(['NVDA', 'TSLA', 'AAPL', 'SPY', 'QQQ', 'ARM'])
+            symbol = random.choice(['NVDA', 'TSLA', 'AAPL', 'SPY', 'QQQ'])
             pnl = round(random.uniform(-850, 2450), 0)
             buy_price = round(random.uniform(2.8, 8.5), 2)
             todays_trades.append({
@@ -126,10 +126,8 @@ with tab2:
             with st.expander(f":{color}[**{trade['symbol']} {trade['action']}**]", expanded=False):
                 st.write(f"**Buy:** {trade['buy_time']} — {trade['buy_reason']}")
                 st.write(f"**Exit:** {trade['exit_time']} — {trade['exit_reason']}")
-                st.write("**Option Details:**")
-                st.write(f"- Buy Premium: ${trade['buy_price']:.2f} × {trade['contracts']} contracts")
+                st.write(f"- Premium: ${trade['buy_price']:.2f} × {trade['contracts']} contracts")
                 st.write(f"- Delta: {trade['delta']}")
-                st.write(f"- Strike: ${trade['strike']}")
                 pnl_color = "green" if trade['pnl'] > 0 else "red"
                 st.markdown(f"**P&L:** :{pnl_color}[${trade['pnl']:,}]")
                 st.write(f"**What went well:** {trade['good_notes']}")
@@ -140,23 +138,23 @@ with tab3:
     st.markdown("""
     **Entry Rules (Calls example):**
     - SPY is up on the daily → look for calls
-    - First candle closes above Pre-Market High and is over VWAP and over 9EMA
+    - First candle closes above Pre-Market High + above VWAP + above 9EMA
     - Candle taps the Pre-Market High → buy immediately
-    - Highest confluence: bull flag, hammer, dragonfly doji, inverted hammer, bullish spinning top, double/triple bottom, bullish triangle
+    - High confluence: bull flag, hammer, dragonfly doji, inverted hammer, double/triple bottom, bullish triangle
     - No earnings the same week, no red flags from forexfactory
 
     **Risk Rules:**
     - Max 3 trades at a time
-    - $300–$500 per trade
+    - $300–$500 risk per trade
     - 1:2 R:R minimum (10% stop → at least 20% potential profit)
 
     **Exit Rules:**
     - 10% hard stop loss
-    - Close if candle closes below 9EMA, below VWAP, or breaks PMH
-    - 30% partial sell at round dollar (first time)
-    - 3 candles in a row with upper/lower wicks → exit
-    - Runner logic on new high of day
+    - Close if below 9EMA, below VWAP, or breaks PMH
+    - 30% partial at round dollar (first time)
+    - 3 candles with wicks → exit
+    - Runner on new high/low
     """)
 
 st.divider()
-st.caption("AlphaBot-Trainer • SPY Real Candlestick Focus • Educational only")
+st.caption("AlphaBot-Trainer • SPY Real Candlestick Chart + Full Strategy Learning")
