@@ -37,8 +37,6 @@ def get_spy_data(date):
     try:
         df = yf.download("SPY", start=date, end=date + timedelta(days=1), interval='5m', progress=False)
         if df is not None and not df.empty and len(df) > 5:
-            df = df.copy()
-            df.index = pd.to_datetime(df.index)   # Force clean datetime index
             return df
         return None
     except:
@@ -63,20 +61,31 @@ with tab1:
                     increasing_line_color='green',
                     decreasing_line_color='red'
                 )])
-                fig.update_layout(
-                    height=650, 
-                    title="SPY 5-Minute Real Candlesticks",
-                    xaxis_title="Time",
-                    yaxis_title="Price",
-                    xaxis_rangeslider_visible=True
-                )
+                fig.update_layout(height=650, title="SPY 5-Minute Real Candlesticks")
                 st.plotly_chart(fig, use_container_width=True)
                 
-                last_price = float(df['Close'].iloc[-1])
+                # Force scalar conversion
+                last_price = float(df['Close'].iloc[-1].item() if hasattr(df['Close'].iloc[-1], 'item') else df['Close'].iloc[-1])
                 st.metric("Last Price", f"${last_price:.2f}")
-                st.success(f"✅ Real data loaded ({len(df)} candles)")
+                st.success("✅ Real data loaded")
             except Exception as e:
-                st.error(f"Chart rendering issue: {str(e)}")
+                st.error(f"Real chart error: {str(e)}")
+                st.info("Showing simulated chart instead...")
+                # Simulated fallback
+                base = 580.0
+                times = pd.date_range(start=selected_date, periods=72, freq='5min')
+                prices = [base + i*0.2 + random.gauss(0, 1.5) for i in range(72)]
+                fig_sim = go.Figure(data=[go.Candlestick(
+                    x=times,
+                    open=[p-0.5 for p in prices],
+                    high=[p+1 for p in prices],
+                    low=[p-1 for p in prices],
+                    close=prices,
+                    increasing_line_color='green',
+                    decreasing_line_color='red'
+                )])
+                fig_sim.update_layout(height=500, title="Simulated SPY 5-Min Candles")
+                st.plotly_chart(fig_sim, use_container_width=True)
         else:
             st.warning("No real data available for this date.")
             st.info("Showing simulated chart for demonstration.")
