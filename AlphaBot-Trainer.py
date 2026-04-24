@@ -4,7 +4,6 @@ import random
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-# Safe yfinance
 try:
     import yfinance as yf
     HAS_YFINANCE = True
@@ -14,7 +13,7 @@ except ImportError:
 st.set_page_config(page_title="AlphaBot-Trainer", layout="wide")
 
 st.warning("⚠️ **EDUCATIONAL TOOL ONLY** ⚠️\n\n"
-           "This is for learning only. Do not use for real trading.")
+           "This is a learning simulator. Do not use for real trading decisions.")
 
 st.title("🚀 AlphaBot-Trainer")
 st.caption("SPY Real Candlestick Chart + Strategy Learning")
@@ -37,7 +36,7 @@ def get_spy_data(date):
         return None
     try:
         df = yf.download("SPY", start=date, end=date + timedelta(days=1), interval='5m', progress=False)
-        if df is not None and not df.empty and len(df) > 5 and 'Close' in df.columns:
+        if df is not None and not df.empty and len(df) > 5:
             return df
         return None
     except:
@@ -53,7 +52,7 @@ with tab1:
     else:
         df = get_spy_data(selected_date)
         
-        if df is not None and not df.empty and 'Close' in df.columns:
+        if df is not None and not df.empty:
             try:
                 fig = go.Figure(data=[go.Candlestick(
                     x=df.index,
@@ -68,8 +67,10 @@ with tab1:
                 st.plotly_chart(fig, use_container_width=True)
                 
                 current_price = float(df['Close'].iloc[-1])
+                st.metric("Last Price", f"${current_price:.2f}")
             except Exception as e:
-                st.error(f"Error displaying chart: {str(e)}")
+                st.error(f"Chart error: {str(e)}")
+                current_price = 0.0
         else:
             st.error("No real data available for this date. Try a more recent trading day.")
 
@@ -87,13 +88,13 @@ with tab3:
     st.subheader("Your AlphaTrade Strategy Rules")
     st.markdown("""
     **Entry Rules (Calls example):**
-    - SPY daily up
-    - Candle closes above Pre-Market High + above VWAP + above 9EMA
-    - Candle taps PMH → buy
+    - SPY is up on the daily → look for calls
+    - First candle closes above Pre-Market High + above VWAP + above 9EMA
+    - Candle taps the Pre-Market High → buy immediately
     - High confluence (hammer, doji, bull flag, etc.)
 
     **Exit Rules:**
-    - 10% stop
+    - 10% hard stop
     - Below 9EMA or VWAP
     - 30% partial at round dollars
     - 3-wick rule
