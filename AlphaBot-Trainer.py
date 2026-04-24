@@ -4,6 +4,7 @@ import random
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
+# Safe yfinance
 try:
     import yfinance as yf
     HAS_YFINANCE = True
@@ -13,7 +14,7 @@ except ImportError:
 st.set_page_config(page_title="AlphaBot-Trainer", layout="wide")
 
 st.warning("⚠️ **EDUCATIONAL TOOL ONLY** ⚠️\n\n"
-           "This is a learning simulator only. Do not use for real trading.")
+           "This is for learning only. Do not use for real trading.")
 
 st.title("🚀 AlphaBot-Trainer")
 st.caption("SPY Real Candlestick Chart + Strategy Learning")
@@ -45,7 +46,7 @@ def get_spy_data(date):
 with tab1:
     st.subheader(f"SPY — {selected_date.strftime('%B %d, %Y')}")
 
-    current_price = 0.0   # Always defined first
+    current_price = 0.0
 
     if is_market_closed(selected_date):
         st.error("🛑 Markets were closed on this day.")
@@ -53,24 +54,25 @@ with tab1:
         df = get_spy_data(selected_date)
         
         if df is not None and not df.empty and 'Close' in df.columns:
-            fig = go.Figure(data=[go.Candlestick(
-                x=df.index,
-                open=df['Open'],
-                high=df['High'],
-                low=df['Low'],
-                close=df['Close'],
-                increasing_line_color='green',
-                decreasing_line_color='red'
-            )])
-            fig.update_layout(height=650, title="SPY 5-Minute Real Candlesticks")
-            st.plotly_chart(fig, use_container_width=True)
-            
-            current_price = float(df['Close'].iloc[-1])
-            st.metric("Last Price", f"${current_price:.2f}")
+            try:
+                fig = go.Figure(data=[go.Candlestick(
+                    x=df.index,
+                    open=df['Open'],
+                    high=df['High'],
+                    low=df['Low'],
+                    close=df['Close'],
+                    increasing_line_color='green',
+                    decreasing_line_color='red'
+                )])
+                fig.update_layout(height=650, title="SPY 5-Minute Real Candlesticks")
+                st.plotly_chart(fig, use_container_width=True)
+                
+                current_price = float(df['Close'].iloc[-1])
+            except Exception as e:
+                st.error(f"Error displaying chart: {str(e)}")
         else:
             st.error("No real data available for this date. Try a more recent trading day.")
 
-    # Always safe
     st.metric("Last Price", f"${current_price:.2f}")
 
 with tab2:
@@ -84,9 +86,10 @@ with tab2:
 with tab3:
     st.subheader("Your AlphaTrade Strategy Rules")
     st.markdown("""
-    **Entry Rules (Calls):**
+    **Entry Rules (Calls example):**
     - SPY daily up
     - Candle closes above Pre-Market High + above VWAP + above 9EMA
+    - Candle taps PMH → buy
     - High confluence (hammer, doji, bull flag, etc.)
 
     **Exit Rules:**
