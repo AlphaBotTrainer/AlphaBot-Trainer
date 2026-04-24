@@ -14,10 +14,10 @@ st.set_page_config(page_title="AlphaBot-Trainer", layout="wide")
 
 st.warning("⚠️ **EDUCATIONAL TOOL ONLY** ⚠️\n\n"
            "This is a learning simulator. Signals, trades, and P&L are for education only. "
-           "Real trading involves substantial risk of loss. Do not trade based on this app.")
+           "Real trading involves substantial risk of loss.")
 
 st.title("🚀 AlphaBot-Trainer")
-st.caption("SPY Real Candlestick Focus + Full Strategy Learning")
+st.caption("SPY Real Candlestick Chart + Full Strategy Learning")
 
 # Sidebar
 with st.sidebar:
@@ -51,14 +51,14 @@ def get_spy_data(date):
 with tab1:
     st.subheader(f"SPY Real Candlestick Chart — {selected_date.strftime('%B %d, %Y')}")
     
+    current_price = 0.0  # Default safe value
+    
     if is_market_closed(selected_date):
         st.error("🛑 Markets were closed on this day.")
-        current_price = 0.0
     else:
         df = get_spy_data(selected_date)
         
         if df is not None and not df.empty:
-            # Real Candlestick Chart
             fig = go.Figure(data=[go.Candlestick(
                 x=df.index,
                 open=df['Open'],
@@ -79,9 +79,9 @@ with tab1:
             
             current_price = df['Close'].iloc[-1]
             st.metric("Last Price", f"${current_price:.2f}")
-            st.caption("**Learning Tip:** Look for closes above Pre-Market High, staying above 9EMA/VWAP, and strong candlestick patterns.")
+            st.caption("**Learning Tip:** Watch for closes above Pre-Market High, staying above 9EMA/VWAP, and strong candlestick patterns.")
         else:
-            st.error("No real data available for this date. Try a recent trading day (within last ~60 days).")
+            st.error("No real data available for this date. Try a more recent trading day.")
             current_price = 0.0
 
 with tab2:
