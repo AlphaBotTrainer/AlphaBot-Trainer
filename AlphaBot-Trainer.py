@@ -77,13 +77,13 @@ with tab1:
             )
             st.plotly_chart(fig, use_container_width=True)
             
-            current_price = df['Close'].iloc[-1]
+            current_price = float(df['Close'].iloc[-1])
             st.metric("Last Price", f"${current_price:.2f}")
             st.caption("**Learning Tip:** Look for closes above Pre-Market High, staying above 9EMA/VWAP, and strong candlestick patterns.")
         else:
-            st.error("No real data available for this date. Try a recent trading day.")
+            st.error("No real data available for this date. Try a more recent trading day.")
     
-    # Always show the metric safely
+    # Always safe metric
     st.metric("Last Price", f"${current_price:.2f}")
 
 with tab2:
