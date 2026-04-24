@@ -51,14 +51,14 @@ def get_spy_data(date):
 with tab1:
     st.subheader(f"SPY Real Candlestick Chart — {selected_date.strftime('%B %d, %Y')}")
     
-    current_price = 0.0  # Safe default
+    current_price = 0.0
     
     if is_market_closed(selected_date):
         st.error("🛑 Markets were closed on this day.")
     else:
         df = get_spy_data(selected_date)
         
-        if df is not None and not df.empty:
+        if df is not None and not df.empty and 'Close' in df.columns:
             fig = go.Figure(data=[go.Candlestick(
                 x=df.index,
                 open=df['Open'],
@@ -81,7 +81,7 @@ with tab1:
             st.metric("Last Price", f"${current_price:.2f}")
             st.caption("**Learning Tip:** Look for closes above Pre-Market High, staying above 9EMA/VWAP, and strong candlestick patterns.")
         else:
-            st.error("No real data available for this date. Try a more recent trading day.")
+            st.error("No real data available for this date. Try a more recent trading day (within last ~60 days).")
     
     # Always safe metric
     st.metric("Last Price", f"${current_price:.2f}")
