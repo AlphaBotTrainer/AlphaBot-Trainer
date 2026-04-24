@@ -66,11 +66,11 @@ with tab1:
                 fig.update_layout(height=650, title="SPY 5-Minute Real Candlesticks")
                 st.plotly_chart(fig, use_container_width=True)
                 
-                current_price = float(df['Close'].iloc[-1])
+                # Force scalar value
+                current_price = float(df['Close'].iloc[-1].item() if hasattr(df['Close'].iloc[-1], 'item') else df['Close'].iloc[-1])
                 st.metric("Last Price", f"${current_price:.2f}")
             except Exception as e:
-                st.error(f"Chart error: {str(e)}")
-                current_price = 0.0
+                st.error(f"Chart display issue: {str(e)}")
         else:
             st.error("No real data available for this date. Try a more recent trading day.")
 
@@ -91,14 +91,14 @@ with tab3:
     - SPY is up on the daily → look for calls
     - First candle closes above Pre-Market High + above VWAP + above 9EMA
     - Candle taps the Pre-Market High → buy immediately
-    - High confluence (hammer, doji, bull flag, etc.)
+    - High confluence: bull flag, hammer, dragonfly doji, inverted hammer, double/triple bottom, bullish triangle
 
     **Exit Rules:**
-    - 10% hard stop
-    - Below 9EMA or VWAP
-    - 30% partial at round dollars
-    - 3-wick rule
-    - Runner on new highs
+    - 10% hard stop loss
+    - Close if below 9EMA, below VWAP, or breaks PMH
+    - 30% partial at round dollar
+    - 3 candles with wicks → exit
+    - Runner on new high/low
     """)
 
 st.caption("AlphaBot-Trainer • Educational only")
