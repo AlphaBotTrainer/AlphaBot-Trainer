@@ -47,45 +47,47 @@ with tab1:
 
     if is_market_closed(selected_date):
         st.error("🛑 Markets were closed on this day.")
-        st.info("No trading data available.")
     else:
         df = get_spy_data(selected_date)
         
         if df is not None and not df.empty:
-            fig = go.Figure(data=[go.Candlestick(
-                x=df.index,
-                open=df['Open'],
-                high=df['High'],
-                low=df['Low'],
-                close=df['Close'],
-                increasing_line_color='green',
-                decreasing_line_color='red'
-            )])
-            fig.update_layout(height=650, title="SPY 5-Minute Real Candlesticks")
-            st.plotly_chart(fig, use_container_width=True)
-            
-            last_price = float(df['Close'].iloc[-1])
-            st.metric("Last Price", f"${last_price:.2f}")
-            st.success("✅ Real data loaded")
+            try:
+                fig = go.Figure(data=[go.Candlestick(
+                    x=df.index,
+                    open=df['Open'],
+                    high=df['High'],
+                    low=df['Low'],
+                    close=df['Close'],
+                    increasing_line_color='green',
+                    decreasing_line_color='red'
+                )])
+                fig.update_layout(height=650, title="SPY 5-Minute Real Candlesticks")
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Super safe price extraction
+                last_price = float(df['Close'].iloc[-1])
+                st.metric("Last Price", f"${last_price:.2f}")
+            except Exception as e:
+                st.error(f"Could not display chart: {str(e)}")
+                st.info("Trying simulated chart instead...")
+                # Simulated fallback
+                base = 580.0
+                times = pd.date_range(start=selected_date, periods=72, freq='5min')
+                prices = [base + i*0.2 + random.gauss(0, 1.5) for i in range(72)]
+                fig_sim = go.Figure(data=[go.Candlestick(
+                    x=times,
+                    open=[p-0.5 for p in prices],
+                    high=[p+1 for p in prices],
+                    low=[p-1 for p in prices],
+                    close=prices,
+                    increasing_line_color='green',
+                    decreasing_line_color='red'
+                )])
+                fig_sim.update_layout(height=500, title="Simulated SPY Candles")
+                st.plotly_chart(fig_sim, use_container_width=True)
         else:
-            st.warning("⚠️ No real data available for this date.")
-            st.info("Showing simulated chart instead (for demonstration).")
-            
-            # Simulated fallback chart
-            base = 580
-            prices = [base + i*0.3 + random.gauss(0, 1.2) for i in range(72)]
-            df_sim = pd.DataFrame({'Price': prices})
-            fig = go.Figure(data=[go.Candlestick(
-                x=pd.date_range(start=selected_date, periods=72, freq='5min'),
-                open=df_sim['Price'] - 0.5,
-                high=df_sim['Price'] + 1,
-                low=df_sim['Price'] - 1,
-                close=df_sim['Price'],
-                increasing_line_color='green',
-                decreasing_line_color='red'
-            )])
-            fig.update_layout(height=500, title="Simulated SPY 5-Min Candles (No real data)")
-            st.plotly_chart(fig, use_container_width=True)
+            st.warning("No real data available for this date.")
+            st.info("Showing simulated chart for demonstration.")
 
 with tab2:
     st.subheader(f"Trades on {selected_date.strftime('%B %d, %Y')}")
@@ -102,14 +104,14 @@ with tab3:
     - SPY is up on the daily → look for calls
     - First candle closes above Pre-Market High + above VWAP + above 9EMA
     - Candle taps the Pre-Market High → buy immediately
-    - High confluence: bull flag, hammer, dragonfly doji, inverted hammer, double/triple bottom, bullish triangle
+    - High confluence (bull flag, hammer, dragonfly doji, etc.)
 
     **Exit Rules:**
-    - 10% hard stop loss
-    - Close if below 9EMA, below VWAP, or breaks PMH
-    - 30% partial at round dollar (first time)
-    - 3 candles with wicks → exit
-    - Runner on new high/low
+    - 10% hard stop
+    - Below 9EMA or VWAP
+    - 30% partial at round dollar
+    - 3-wick rule
+    - Runner on new highs
     """)
 
 st.caption("AlphaBot-Trainer • Educational only")
